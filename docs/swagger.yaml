@@ -1,0 +1,50 @@
+basePath: /api/v1/
+host: xhlar.com
+info:
+  contact:
+    email: soporte@xhlar.com
+    name: API Support
+    url: http://www.xhlar.com/soporte
+  description: Control Panel API for Xhlar
+  termsOfService: http://xhlar.com/terminos-condiciones/
+  title: Xhlar API
+  version: "1.0"
+paths:
+  /auth/loginStatus:
+    get:
+      consumes:
+      - application/json
+      description: Get the login status of current logged-in user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: The current user have already logged-in. Returns true.
+          schema:
+            type: boolean
+        "401":
+          description: The current user haven't logged-in yet. Returns false.
+          schema:
+            type: boolean
+      summary: Get the login status.
+      tags:
+      - Auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Logout the current user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Logout the current user.
+          schema:
+            type: string
+      summary: Logout the current user.
+      tags:
+      - Auth
+schemes:
+- http
+- https
+swagger: "2.0"

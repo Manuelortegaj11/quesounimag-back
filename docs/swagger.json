@@ -1,0 +1,74 @@
+{
+    "schemes": [
+        "http",
+        "https"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "Control Panel API for Xhlar",
+        "title": "Xhlar API",
+        "termsOfService": "http://xhlar.com/terminos-condiciones/",
+        "contact": {
+            "name": "API Support",
+            "url": "http://www.xhlar.com/soporte",
+            "email": "soporte@xhlar.com"
+        },
+        "version": "1.0"
+    },
+    "host": "xhlar.com",
+    "basePath": "/api/v1/",
+    "paths": {
+        "/auth/loginStatus": {
+            "get": {
+                "description": "Get the login status of current logged-in user.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Get the login status.",
+                "responses": {
+                    "200": {
+                        "description": "The current user have already logged-in. Returns true.",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    "401": {
+                        "description": "The current user haven't logged-in yet. Returns false.",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/logout": {
+            "post": {
+                "description": "Logout the current user.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Logout the current user.",
+                "responses": {
+                    "200": {
+                        "description": "Logout the current user.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
