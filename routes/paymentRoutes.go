@@ -10,7 +10,7 @@ import (
 func SetupPaymentRoutes(e *echo.Echo, db *gorm.DB) {
 
     paymentController := controllers.NewPaymentController(db)
-    apiPaymentGroup := e.Group("/api/v1/payment")
+    apiPaymentGroup := e.Group("/v1/payment")
 
     apiPaymentGroup.GET("", controllers.GetPayment)
     apiPaymentGroup.POST("", paymentController.CreatePayment)

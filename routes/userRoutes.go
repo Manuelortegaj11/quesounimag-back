@@ -13,7 +13,7 @@ func SetupUserRoutes(e *echo.Echo, db *gorm.DB) {
 
     userController := controllers.NewUserController(db)
 
-    apiUsersGroup := e.Group("/api/v1/user")
+    apiUsersGroup := e.Group("/v1/user")
     apiUsersGroup.Use(middleware.JwtMiddleware)
 
     apiUsersGroup.GET("", userController.GetUser)

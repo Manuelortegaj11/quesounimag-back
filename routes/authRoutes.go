@@ -11,7 +11,7 @@ import (
 func SetupAuthRoutes(e *echo.Echo, db *gorm.DB) {
 
     authController := controllers.NewAuthController(db)
-    apiAuthGroup := e.Group("/api/v1/auth")
+    apiAuthGroup := e.Group("/v1/auth")
     apiAuthGroup.POST("/login", authController.LoginUser)
     apiAuthGroup.POST("/register", authController.RegisterUser)
     apiAuthGroup.POST("/logout", controllers.LogoutUser)
