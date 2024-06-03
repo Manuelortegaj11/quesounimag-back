@@ -3,12 +3,12 @@ package controllers
 import (
 	"net/http"
 	"os"
-	"time"
 	"proyectoqueso/models"
 	"proyectoqueso/security"
 	util "proyectoqueso/utils"
-
+	"time"
 	"github.com/golang-jwt/jwt"
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
 	// "golang.org/x/crypto/bcrypt"
@@ -87,6 +87,7 @@ func (au *AuthController) RegisterUser(c echo.Context) error {
 
 		// Create user with data of the Request
 		newUser := &models.User{
+      ID: uuid.New(),
 			FirstName: name,
 			Email:     email,
 			Password:  string(hashedPassword),

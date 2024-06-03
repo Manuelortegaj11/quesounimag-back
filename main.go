@@ -16,16 +16,6 @@ var (
     err error
 )
 
-// @title Xhlar API 
-// @version 1.0
-// @description Control Panel API for Xhlar
-// @termsOfService http://xhlar.com/terminos-condiciones/
-// @contact.name API Support
-// @contact.email soporte@xhlar.com
-// @contact.url http://www.xhlar.com/soporte
-// @host xhlar.com
-// @BasePath /api/v1/
-// @schemes http https
 func main() {
 
   e := echo.New()

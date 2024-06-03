@@ -42,7 +42,6 @@ func NewDB() (*gorm.DB, error) {
 func Migrate(db *gorm.DB) (*gorm.DB, error){
     if err := db.AutoMigrate(
     &models.User{}, 
-    &models.Domain{}, 
     &models.Product{}, 
     &models.Payment{}, 
     &models.Order{},
@@ -52,7 +51,6 @@ func Migrate(db *gorm.DB) (*gorm.DB, error){
         return nil, err 
     }
 
-    db.Model(&models.Domain{}).Association("User")
     db.Model(&models.Order{}).Association("User")
     db.Model(&models.Order{}).Association("Product")
     db.Model(&models.Payment{}).Association("User")
