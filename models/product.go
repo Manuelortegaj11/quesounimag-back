@@ -6,8 +6,8 @@ import (
 
 type Product struct {
   gorm.Model
-  name string
-  description string
-  price float64
+  Name string
+  Description string
+  Price float64
   
 }
