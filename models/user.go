@@ -2,14 +2,14 @@ package models
 
 import (
 	// "github.com/google/uuid"
-  "github.com/google/uuid"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type User struct {
 	gorm.Model
 	ID                 uuid.UUID `gorm:"type:char(36);primary_key"`
-	Email              string `gorm:"unique"`
+	Email              string    `gorm:"unique"`
 	Password           string
 	FirstName          string
 	LastName           string
@@ -22,17 +22,34 @@ type User struct {
 	PostalCode         string
 	LanguagePreference string
 	CurrencyPreference string
-  Roles []Role `gorm:"many2many:user_roles;"`
+	Roles              []Role       `gorm:"many2many:user_roles;"`
+	Permissions        []Permission `gorm:"many2many:user_permissions;"`
 }
 
 type Role struct {
 	gorm.Model
 	Name        string `gorm:"unique"`
+	GuardName   string
 	Permissions []Permission `gorm:"many2many:role_permissions;"`
 }
 
 type Permission struct {
 	gorm.Model
-	Name string `gorm:"unique"`
+	Name      string `gorm:"unique"`
+	GuardName string
 }
 
+type UserRole struct {
+	UserID int
+	RoleID int
+}
+
+type RolePermission struct {
+	RoleID       int
+	PermissionID int
+}
+
+type UserPermission struct {
+	UserID       int
+	PermissionID int
+}
