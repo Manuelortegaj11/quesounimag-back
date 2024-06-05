@@ -16,5 +16,7 @@ func SetupCategoryRoutes(e *echo.Echo, db *gorm.DB) {
     apiCategoryGroup.PUT("", categoryController.UpdateCategory)
     apiCategoryGroup.DELETE("", categoryController.DeleteCategory)
     apiCategoryGroup.GET("", categoryController.GetCategories)
+  apiCategoryGroup.GET(":id", categoryController.GetCategories)
+  apiCategoryGroup.GET(":slug", categoryController.GetCategories)
 }
 

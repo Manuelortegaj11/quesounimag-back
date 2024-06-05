@@ -3,6 +3,7 @@ package controllers
 import (
 	"net/http"
 	"proyectoqueso/models"
+	"strconv"
 
 	"github.com/labstack/echo/v4"
 
@@ -144,9 +145,38 @@ func (au *CategoryController) DeleteCategory(c echo.Context) error {
 }
 
 func (au *CategoryController) GetCategories(c echo.Context) error {
-	var categories []models.Category
+	id := c.QueryParam("id")
+	slug := c.QueryParam("slug")
 
-	// Retrieve all categories from the database
+	// Check if id is provided
+	if id != "" {
+		categoryID, err := strconv.Atoi(id)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "Invalid category ID")
+		}
+
+		// Retrieve a single category by ID
+		var category models.Category
+		if err := au.DB.First(&category, categoryID).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return echo.NewHTTPError(http.StatusNotFound, "Category not found")
+			}
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+		return c.JSON(http.StatusOK, category)
+	}
+
+	// Check if slug is provided
+	if slug != "" {
+		var categories []models.Category
+		if err := au.DB.Where("name LIKE ?", "%"+slug+"%").Find(&categories).Error; err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+		return c.JSON(http.StatusOK, categories)
+	}
+
+	// Retrieve all categories if no ID or slug is provided
+	var categories []models.Category
 	if err := au.DB.Find(&categories).Error; err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
