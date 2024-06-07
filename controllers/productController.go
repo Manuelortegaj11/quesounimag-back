@@ -20,42 +20,44 @@ func NewProductController(db *gorm.DB) *ProductController {
 }
 
 func (au *ProductController) CreateProduct(c echo.Context) error {
-
+	// Declara una variable para almacenar el cuerpo de la solicitud
 	var requestBody map[string]interface{}
 
+	// Intenta unir el cuerpo de la solicitud al mapa
 	if err := c.Bind(&requestBody); err != nil {
 		return err
 	}
 
+	// Verifica si el cuerpo de la solicitud es nulo
 	if requestBody == nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Missing JSON body")
 	}
 
-	if _, ok := requestBody["name"]; !ok {
-		return echo.NewHTTPError(http.StatusBadRequest, "Missing name field")
+	// Verifica si se proporcionan los campos necesarios en el cuerpo de la solicitud
+	requiredFields := []string{"name", "description", "price", "stock", "category_id"}
+	for _, field := range requiredFields {
+		if _, ok := requestBody[field]; !ok {
+			return echo.NewHTTPError(http.StatusBadRequest, "Missing "+field+" field")
+		}
 	}
 
-	name := requestBody["name"].(string)
-
-	// Check if category already exists
-	var category models.Category
-
-	queryUser := au.DB.Where("name = ?", name).First(&category)
-
-	if queryUser.Error == nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Category already exists")
+	// Crea un nuevo producto
+	newProduct := &models.Product{
+		Name:        requestBody["name"].(string),
+		Description: requestBody["description"].(string),
+		Price:       requestBody["price"].(float64),
+		Stock:       int(requestBody["stock"].(float64)),
+		CategoryID:  int64(requestBody["category_id"].(float64)),
 	}
 
-	newCategory := &models.Category{
-		Name: name,
-	}
-
-	if err := au.DB.Create(newCategory).Error; err != nil {
+	// Guarda el nuevo producto en la base de datos
+	if err := au.DB.Create(newProduct).Error; err != nil {
 		return err
 	}
 
+	// Devuelve una respuesta JSON indicando que el producto se creó correctamente
 	return c.JSON(http.StatusOK, map[string]string{
-		"message": "Category created successfully",
+		"message": "Product created successfully",
 	})
 }
 
@@ -131,8 +133,8 @@ func (au *ProductController) DeleteProduct(c echo.Context) error {
 	queryCategory := au.DB.Where("name = ?", name).First(&category)
 
 	if queryCategory.Error != nil {
-			return echo.NewHTTPError(http.StatusNotFound, "Category not found")
-  }
+		return echo.NewHTTPError(http.StatusNotFound, "Category not found")
+	}
 
 	// Delete the category
 	if err := au.DB.Delete(&category).Error; err != nil {
