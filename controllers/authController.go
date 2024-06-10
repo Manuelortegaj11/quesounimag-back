@@ -128,35 +128,36 @@ func (au *AuthController) LoginUser(c echo.Context) error {
 
 	email := requestBody["email"].(string)
 	password := requestBody["password"].(string)
-	// npassword := []byte(password)
 
-	// Retrieve password from database
-	var user models.User
-	userPassword := user.Password
-
-	if err := au.DB.First(&user, "email = ?", email).Error; err != nil {
-      return c.JSON(http.StatusNotFound, "User not found")
+	match, err := util.IsValidEmail(email)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid email")
 	}
 
- //  if err := bcrypt.CompareHashAndPassword(userPassword, npassword); err != nil {
- //    return c.JSON(http.StatusBadRequest, map[string]string{
- //      "message": "Invalid email or password",
- //    })
- //  }
+	var user models.User
 
-  security.VerifyPassword(userPassword, password)
+	if err := au.DB.First(&user, "email = ?", email).Error; err != nil {
+		return c.JSON(http.StatusNotFound, "User not found")
+	}
 
-  claims := jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.StandardClaims{
-    ExpiresAt: time.Now().Add(time.Hour * 24 * 7).Unix(),
-    Issuer:    user.Email,
-  })
-
-  token, err := claims.SignedString(jwtKey)
-  if err != nil {
-    return c.JSON(http.StatusInternalServerError, map[string]string{
-      "message": "Error generating token",
-    })
+  verifyPassword := security.VerifyPassword(user.Password, password)
+	if match {
+		if verifyPassword != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "Password can't verify")
+		}
   }
+
+	claims := jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.StandardClaims{
+		ExpiresAt: time.Now().Add(time.Hour * 24 * 7).Unix(),
+		Issuer:    user.Email,
+	})
+
+	token, err := claims.SignedString(jwtKey)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "Error generating token",
+		})
+	}
 
   // Set cookie
   OneWeek := time.Now().Add(time.Hour * 24 * 7)
