@@ -19,7 +19,7 @@ func SetupAuthRoutes(e *echo.Echo, db *gorm.DB) {
 	apiAuthGroup.GET("/session", authController.SessionUser)
 
   // MAIL CONFIRMATION
-	apiAuthGroup.POST("/confirm", authController.ConfirmEmail)
+	apiAuthGroup.POST("/confirm", authController.ConfirmUser)
 	apiAuthGroup.POST("/resend-code", authController.ResendConfirmationCode)
 
 }

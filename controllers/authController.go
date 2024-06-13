@@ -1,10 +1,12 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"proyectoqueso/models"
 	"proyectoqueso/security"
+	"proyectoqueso/utils"
 	util "proyectoqueso/utils"
 	"time"
 
@@ -31,6 +33,10 @@ var (
 
 func NewAuthController(db *gorm.DB) *AuthController {
 	return &AuthController{DB: db}
+}
+
+func GenerateCode() {
+
 }
 
 func (au *AuthController) RegisterUser(c echo.Context) error {
@@ -83,15 +89,22 @@ func (au *AuthController) RegisterUser(c echo.Context) error {
 			return echo.NewHTTPError(http.StatusBadRequest, "Password can't verify")
 		}
 
-		// c.Logger().Info(hashedPassword)
-		// c.Logger().Info(verifyPassword)
+		confirmationCode := utils.GenerateConfirmationCode()
+		subject := "Confirm your account"
+		body := fmt.Sprintf("Your confirmation code is: %s", confirmationCode)
+
+		if err := util.SendEmail(email, subject, body); err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to send confirmation email")
+		}
 
 		// Create user with data of the Request
 		newUser := &models.User{
 			ID: uuid.New(),
 			// FirstName: name,
-			Email:    email,
-			Password: string(hashedPassword),
+			Email:            email,
+			Password:         string(hashedPassword),
+			ConfirmationCode: confirmationCode,
+			IsConfirmed:      false,
 		}
 
 		if err := au.DB.Create(newUser).Error; err != nil {
@@ -224,7 +237,7 @@ func (ac *AuthController) SessionUser(c echo.Context) error {
 	userID := claims.Issuer // This should be the user ID
 
 	// Query the user from the database using GORM
-  var user models.User
+	var user models.User
 	if err := ac.DB.Where("id = ?", userID).First(&user).Error; err != nil {
 		// Handle the case where the user with the given ID is not found
 		return c.JSON(http.StatusNotFound, map[string]string{
@@ -232,18 +245,49 @@ func (ac *AuthController) SessionUser(c echo.Context) error {
 		})
 	}
 
-  user.Password = ""
+	user.Password = ""
 
 	// Return the user data
 	return c.JSON(http.StatusOK, user)
 }
 
-func (ac *AuthController) ConfirmEmail(c echo.Context) error {
+func (au *AuthController) ConfirmUser(c echo.Context) error {
+    var requestBody map[string]interface{}
 
-	return c.JSON(http.StatusOK, map[string]string{
-		"message": "Cuenta activada correctamente.",
-	})
+    if err := c.Bind(&requestBody); err != nil {
+        return err
+    }
 
+    if requestBody == nil {
+        return echo.NewHTTPError(http.StatusBadRequest, "Missing JSON body")
+    }
+
+    if _, ok := requestBody["email"]; !ok {
+        return echo.NewHTTPError(http.StatusBadRequest, "Missing email field")
+    }
+
+    if _, ok := requestBody["confirmation_code"]; !ok {
+        return echo.NewHTTPError(http.StatusBadRequest, "Missing confirmation code field")
+    }
+
+    email := requestBody["email"].(string)
+    confirmationCode := requestBody["confirmation_code"].(string)
+
+    var user models.User
+    if err := au.DB.Where("email = ? AND confirmation_code = ?", email, confirmationCode).First(&user).Error; err != nil {
+        return echo.NewHTTPError(http.StatusBadRequest, "Invalid email or confirmation code")
+    }
+
+    user.IsConfirmed = true
+    user.ConfirmationCode = ""
+
+    if err := au.DB.Save(&user).Error; err != nil {
+        return echo.NewHTTPError(http.StatusInternalServerError, "Failed to confirm user")
+    }
+
+    return c.JSON(http.StatusOK, map[string]string{
+        "message": "Account confirmed successfully",
+    })
 }
 
 func (ac *AuthController) ResendConfirmationCode(c echo.Context) error {

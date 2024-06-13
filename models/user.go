@@ -24,6 +24,8 @@ type User struct {
 	CurrencyPreference string
 	Roles              []Role       `gorm:"many2many:user_roles;"`
 	Permissions        []Permission `gorm:"many2many:user_permissions;"`
+	ConfirmationCode   string
+	IsConfirmed        bool `gorm:"default:false"`
 }
 
 type Role struct {
