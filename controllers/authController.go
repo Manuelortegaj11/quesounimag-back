@@ -7,6 +7,7 @@ import (
 	"proyectoqueso/security"
 	util "proyectoqueso/utils"
 	"time"
+
 	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -20,12 +21,12 @@ type AuthController struct {
 }
 
 type ErrorResponse struct {
-  Message string `json:"message"`
-  Errors []string `json:"errors"`
+	Message string   `json:"message"`
+	Errors  []string `json:"errors"`
 }
 
 var (
-  jwtKey = []byte(os.Getenv("JWT_SECRET"))
+	jwtKey = []byte(os.Getenv("JWT_SECRET"))
 )
 
 func NewAuthController(db *gorm.DB) *AuthController {
@@ -33,8 +34,8 @@ func NewAuthController(db *gorm.DB) *AuthController {
 }
 
 func (au *AuthController) RegisterUser(c echo.Context) error {
-  // c.Logger().Info(config.GetEnv("JWT_SECRET"))
-  // JSON body
+	// c.Logger().Info(config.GetEnv("JWT_SECRET"))
+	// JSON body
 	var requestBody map[string]interface{}
 
 	if err := c.Bind(&requestBody); err != nil {
@@ -45,9 +46,9 @@ func (au *AuthController) RegisterUser(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Missing JSON body")
 	}
 
-	if _, ok := requestBody["name"]; !ok {
-		return echo.NewHTTPError(http.StatusBadRequest, "Missing name field")
-	}
+	// if _, ok := requestBody["name"]; !ok {
+	// 	return echo.NewHTTPError(http.StatusBadRequest, "Missing name field")
+	// }
 
 	if _, ok := requestBody["email"]; !ok {
 		return echo.NewHTTPError(http.StatusBadRequest, "Missing email field")
@@ -57,14 +58,14 @@ func (au *AuthController) RegisterUser(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Missing password field")
 	}
 
-	name := requestBody["name"].(string)
+	// name := requestBody["name"].(string)
 	email := requestBody["email"].(string)
 	password := requestBody["password"].(string)
 
-  match, err := util.IsValidEmail(email)
-  if err != nil {
-    return echo.NewHTTPError(http.StatusBadRequest, "Invalid email")
-  }
+	match, err := util.IsValidEmail(email)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid email")
+	}
 
 	if match {
 		// Check if email already exists
@@ -75,39 +76,39 @@ func (au *AuthController) RegisterUser(c echo.Context) error {
 			return echo.NewHTTPError(http.StatusBadRequest, "Email already exists")
 		}
 
-    hashedPassword, _ := security.EncryptPassword(password)
-    verifyPassword := security.VerifyPassword(hashedPassword, password); 
+		hashedPassword, _ := security.EncryptPassword(password)
+		verifyPassword := security.VerifyPassword(hashedPassword, password)
 
-    if verifyPassword != nil {
-      return echo.NewHTTPError(http.StatusBadRequest, "Password can't verify");
-    }
+		if verifyPassword != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "Password can't verify")
+		}
 
 		// c.Logger().Info(hashedPassword)
 		// c.Logger().Info(verifyPassword)
 
 		// Create user with data of the Request
 		newUser := &models.User{
-      ID: uuid.New(),
-			FirstName: name,
-			Email:     email,
-			Password:  string(hashedPassword),
+			ID: uuid.New(),
+			// FirstName: name,
+			Email:    email,
+			Password: string(hashedPassword),
 		}
 
 		if err := au.DB.Create(newUser).Error; err != nil {
 			return err
 		}
 
-    return c.JSON(http.StatusOK, map[string]string{
-      "message": "User created successfully",
-    })
+		return c.JSON(http.StatusOK, map[string]string{
+			"message": "User created successfully",
+		})
 
-	} 
-  return nil
+	}
+	return nil
 }
 
 // Create a route for login an user with email and password with gorm
 func (au *AuthController) LoginUser(c echo.Context) error {
-  // JSON body
+	// JSON body
 	var requestBody map[string]interface{}
 
 	if err := c.Bind(&requestBody); err != nil {
@@ -140,16 +141,16 @@ func (au *AuthController) LoginUser(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, "User not found")
 	}
 
-  verifyPassword := security.VerifyPassword(user.Password, password)
+	verifyPassword := security.VerifyPassword(user.Password, password)
 	if match {
 		if verifyPassword != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, "Password can't verify")
 		}
-  }
+	}
 
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.StandardClaims{
 		ExpiresAt: time.Now().Add(time.Hour * 24 * 7).Unix(),
-		Issuer:    user.Email,
+		Issuer:    user.ID.String(),
 	})
 
 	token, err := claims.SignedString(jwtKey)
@@ -159,16 +160,17 @@ func (au *AuthController) LoginUser(c echo.Context) error {
 		})
 	}
 
-  // Set cookie
-  OneWeek := time.Now().Add(time.Hour * 24 * 7)
-  cookie := new(http.Cookie)
-  cookie.Name = "jwt"
-  cookie.Value = token
-  cookie.Expires = OneWeek
-  cookie.HttpOnly = true
-  c.SetCookie(cookie)
+	// Set cookie
+	OneWeek := time.Now().Add(time.Hour * 24 * 7)
+	cookie := new(http.Cookie)
+	cookie.Name = "token"
+	cookie.Value = token
+	cookie.Expires = OneWeek
+	cookie.HttpOnly = true
+	c.SetCookie(cookie)
 
 	return c.JSON(http.StatusOK, map[string]string{
+		"token":   token,
 		"message": "User Login successfully",
 	})
 }
@@ -182,13 +184,70 @@ func (au *AuthController) LoginUser(c echo.Context) error {
 // @Success 200 {string} string "Logout the current user."
 // @Success 401 {string} string "The current user haven't logged-in yet.
 // @Router /auth/logout [post]
-func LogoutUser(c echo.Context) error {
-  cookie := new(http.Cookie)
-  cookie.Name = "jwt"
-  cookie.Value = ""
-  cookie.Expires = time.Now().Add(-time.Hour)
-  cookie.HttpOnly = true
-  c.SetCookie(cookie)
-  return c.String(http.StatusOK, "Logout user!")
+func (ac *AuthController) LogoutUser(c echo.Context) error {
+	// Simplemente devuelve una respuesta exitosa, indicando al cliente que elimine el token almacenado
+	return c.JSON(http.StatusOK, map[string]string{
+		"message": "Usuario ha cerrado sesión correctamente",
+	})
+}
 
+func (ac *AuthController) SessionUser(c echo.Context) error {
+
+	cookie, err := c.Cookie("token")
+	if err != nil {
+		// Handle the case where the cookie is not found or other error occurs
+		return c.JSON(http.StatusUnauthorized, map[string]string{
+			"message": "Token not found",
+		})
+	}
+	tokenValue := cookie.Value
+
+	// Parse the token without validating the signature
+	token, err := jwt.ParseWithClaims(tokenValue, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(jwtKey), nil // Replace "your-secret-key" with your actual secret key
+	})
+	if err != nil {
+		// Handle the case where the token cannot be parsed
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"message": "Invalid token",
+		})
+	}
+
+	// Extract the user ID from the token claims
+	claims, ok := token.Claims.(*jwt.StandardClaims)
+	if !ok {
+		// Handle the case where the claims cannot be extracted
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"message": "Invalid token claims",
+		})
+	}
+	userID := claims.Issuer // This should be the user ID
+
+	// Query the user from the database using GORM
+  var user models.User
+	if err := ac.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+		// Handle the case where the user with the given ID is not found
+		return c.JSON(http.StatusNotFound, map[string]string{
+			"message": "User not found",
+		})
+	}
+
+  user.Password = ""
+
+	// Return the user data
+	return c.JSON(http.StatusOK, user)
+}
+
+func (ac *AuthController) ConfirmEmail(c echo.Context) error {
+
+	return c.JSON(http.StatusNotFound, map[string]string{
+		"message": "Cuenta activada correctamente.",
+	})
+
+}
+
+func (ac *AuthController) ResendConfirmationCode(c echo.Context) error {
+	return c.JSON(http.StatusOK, map[string]string{
+		"message": "Cuenta activada correctamente.",
+	})
 }

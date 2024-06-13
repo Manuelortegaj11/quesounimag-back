@@ -14,5 +14,12 @@ func SetupAuthRoutes(e *echo.Echo, db *gorm.DB) {
 	apiAuthGroup := e.Group("/v1/auth")
 	apiAuthGroup.POST("/login", authController.LoginUser)
 	apiAuthGroup.POST("/register", authController.RegisterUser)
-	apiAuthGroup.POST("/logout", controllers.LogoutUser)
+	apiAuthGroup.POST("/logout", authController.LogoutUser)
+	apiAuthGroup.OPTIONS("/session", authController.SessionUser)
+	apiAuthGroup.GET("/session", authController.SessionUser)
+
+  // MAIL CONFIRMATION
+	apiAuthGroup.POST("/confirm", authController.ConfirmEmail)
+	apiAuthGroup.POST("/resend-code", authController.ResendConfirmationCode)
+
 }

@@ -2,19 +2,12 @@
 package controllers
 
 import (
+	"net/http"
+	"proyectoqueso/models"
+	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
-	"net/http"
-	// "proyectoqueso/models"
 )
-
-// Configura las rutas utilizando los controladores importados
-// e.GET("/api/users", controllers.GetUsers)
-// e.POST("/api/users", controllers.CreateUser)
-// e.GET("/api/users/:id", controllers.GetUser)
-// e.PUT("/api/users/:id", controllers.UpdateUser)
-// e.DELETE("/api/users/:id", controllers.DeleteUser)
-//
 
 type UserController struct {
 	DB *gorm.DB // Agrega la instancia de la base de datos como un campo en el controlador
@@ -33,9 +26,52 @@ func (uc *UserController) GetUsers(c echo.Context) error {
 	return c.JSON(http.StatusOK, "Get users")
 }
 
-// Create a route for get user with gorm
-func (uc *UserController)GetUser(c echo.Context) error {
-	return c.JSON(http.StatusOK, "Get user")
+// GetUserById retrieves a user by their ID
+func (uc *UserController) GetUserById(c echo.Context) error {
+	// Obtain the value of the "token" cookie
+	cookie, err := c.Cookie("token")
+	if err != nil {
+		// Handle the case where the cookie is not found or other error occurs
+		return c.JSON(http.StatusUnauthorized, map[string]string{
+			"message": "Token not found",
+		})
+	}
+	tokenValue := cookie.Value
+
+	// Parse the token without validating the signature
+	token, err := jwt.ParseWithClaims(tokenValue, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(jwtKey), nil // Replace "your-secret-key" with your actual secret key
+	})
+	if err != nil {
+		// Handle the case where the token cannot be parsed
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"message": "Invalid token",
+		})
+	}
+
+	// Extract the user ID from the token claims
+	claims, ok := token.Claims.(*jwt.StandardClaims)
+	if !ok {
+		// Handle the case where the claims cannot be extracted
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"message": "Invalid token claims",
+		})
+	}
+	userID := claims.Issuer // This should be the user ID
+
+	// Query the user from the database using GORM
+  var user models.User
+	if err := uc.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+		// Handle the case where the user with the given ID is not found
+		return c.JSON(http.StatusNotFound, map[string]string{
+			"message": "User not found",
+		})
+	}
+
+  user.Password = ""
+
+	// Return the user data
+	return c.JSON(http.StatusOK, user)
 }
 
 // Create a route for user profile with gorm

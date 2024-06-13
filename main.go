@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"proyectoqueso/config"
 	_ "proyectoqueso/docs"
 	"proyectoqueso/routes"
@@ -28,7 +29,14 @@ func main() {
 	// Middleware
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
-	e.Use(middleware.CORS())
+    // e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+    //   AllowOrigins: []string{"*"},
+    //     AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization}, // Add Authorization header
+    // }))  
+    e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+        AllowOrigins: []string{"http://localhost:3000"},
+        AllowCredentials: true,
+    }))
 
 	// Routes
 	routes.InitRoute(e, db)
@@ -36,7 +44,14 @@ func main() {
 	// Swagger
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
 
+	// List all registered routes
+	fmt.Println("Registered Routes:")
+	for _, route := range e.Routes() {
+		fmt.Printf("%s %s\n", route.Method, route.Path)
+	}
+
 	// Start server
 	e.Logger.SetLevel(log.INFO)
 	e.Logger.Fatal(e.Start(":1323"))
+
 }

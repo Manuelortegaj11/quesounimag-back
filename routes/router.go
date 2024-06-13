@@ -13,6 +13,7 @@ func InitRoute(e *echo.Echo, db *gorm.DB) {
 	SetupPaymentRoutes(e, db)
 	SetupCategoryRoutes(e, db)
 	SetupProductRoutes(e, db)
+  SetupImagesRoutes(e, db)
 }
 
 func SetupInitRoute(e *echo.Echo, db *gorm.DB) {

@@ -10,8 +10,8 @@ import (
 
 var jwtKey = []byte(os.Getenv("JWT_SECRET"))
 
-func checkCookie(c echo.Context) bool {
-    cookie, err := c.Cookie("jwt")
+func CheckCookie(c echo.Context) bool {
+    cookie, err := c.Cookie("token")
     if err != nil {
         c.Logger().Errorf("Error fetching cookie: %v", err)
         return false
@@ -38,7 +38,7 @@ func checkCookie(c echo.Context) bool {
 
 func JwtMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
     return func(c echo.Context) error {
-        if !checkCookie(c) {
+        if !CheckCookie(c) {
             return c.JSON(http.StatusUnauthorized, map[string]string{
                 "message": "Cookie Unauthorized",
             })
@@ -49,7 +49,7 @@ func JwtMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 
 func CheckRole(next echo.HandlerFunc) echo.HandlerFunc {
   return func(c echo.Context) error {
-    check := checkCookie(c)
+    check := CheckCookie(c)
     if !check {
       return c.JSON(http.StatusUnauthorized, map[string]string{
         "message": "Cookie Unauthorized",
