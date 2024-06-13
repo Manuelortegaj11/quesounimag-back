@@ -240,7 +240,7 @@ func (ac *AuthController) SessionUser(c echo.Context) error {
 
 func (ac *AuthController) ConfirmEmail(c echo.Context) error {
 
-	return c.JSON(http.StatusNotFound, map[string]string{
+	return c.JSON(http.StatusOK, map[string]string{
 		"message": "Cuenta activada correctamente.",
 	})
 
