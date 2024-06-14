@@ -27,7 +27,6 @@ func NewDB() (*gorm.DB, error) {
     dbPassword := os.Getenv("DB_PASSWORD")
     dbName := os.Getenv("DB_NAME")
 
-    // dsn := "root:123456@tcp(localhost:3306)/xhlartest?charset=utf8mb4&parseTime=True&loc=Local"
     dsn := dbUser + ":" + dbPassword + "@tcp(" + dbHost + ":" + dbPort + ")/" + dbName + "?charset=utf8mb4&parseTime=True&loc=Local"
     db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
     if err != nil {

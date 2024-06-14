@@ -3,17 +3,15 @@ package models
 import (
 	// "github.com/google/uuid"
 	"gorm.io/gorm"
-	"time"
 )
 
 type Payment struct {
 	gorm.Model
-	UserID        uint
-	ProductID     uint
-	paymentDate   time.Time
-	paymentAmount uint32
-	User          User    `gorm:"foreignKey:UserID"`
-	Product       Product `gorm:"foreignKey:ProductID"`
+	UserID    uint
+	ProductID uint
+	Amount    uint32
+	User      User    `gorm:"foreignKey:UserID"`
+	Product   Product `gorm:"foreignKey:ProductID"`
 }
 
 // type Domain struct {
