@@ -33,10 +33,7 @@ func NewDB() (*gorm.DB, error) {
     if err != nil {
         return nil, err
     }
-
     return db, nil
-
-
 }
 
 func Migrate(db *gorm.DB) (*gorm.DB, error){
@@ -64,4 +61,29 @@ func Migrate(db *gorm.DB) (*gorm.DB, error){
 
     return db, nil
 }
+
+func DropAllTables(db *gorm.DB) error {
+    var err error
+    tables := []interface{}{
+        &models.User{}, 
+        &models.Role{}, 
+        &models.Permission{}, 
+        &models.UserRole{}, 
+        &models.RolePermission{}, 
+        &models.UserPermission{}, 
+        &models.Product{}, 
+        &models.Payment{}, 
+        &models.Order{},
+        &models.Category{},
+    }
+
+    for _, table := range tables {
+        if err = db.Migrator().DropTable(table); err != nil {
+            return err
+        }
+    }
+
+    return nil
+}
+
 
