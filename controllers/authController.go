@@ -266,12 +266,12 @@ func (au *AuthController) ConfirmUser(c echo.Context) error {
         return echo.NewHTTPError(http.StatusBadRequest, "Missing email field")
     }
 
-    if _, ok := requestBody["confirmation_code"]; !ok {
+    if _, ok := requestBody["code"]; !ok {
         return echo.NewHTTPError(http.StatusBadRequest, "Missing confirmation code field")
     }
 
     email := requestBody["email"].(string)
-    confirmationCode := requestBody["confirmation_code"].(string)
+    confirmationCode := requestBody["code"].(string)
 
     var user models.User
     if err := au.DB.Where("email = ? AND confirmation_code = ?", email, confirmationCode).First(&user).Error; err != nil {
