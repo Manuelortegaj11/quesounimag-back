@@ -9,10 +9,13 @@ GOCLEAN=$(GO) clean
 GOTEST=$(GO) test
 GOVET=$(GO) vet
 
-.PHONY: all build test clean fmt vet run
+.PHONY: all build test clean fmt vet run list
 
 # Primera regla all: La primera regla en el Makefile es all, y es la que se ejecutará por defecto cuando simplemente ejecutes make.
 all: build
+
+list:
+	@grep -E '^[a-zA-Z0-9_-]+:.*' Makefile
 
 # La regla run depende de build
 run: build
@@ -28,7 +31,7 @@ clean:
 	@$(GOCLEAN)
 	@rm -f $(BINARY_NAME)
 
-drop-table:
+drop:
 	@echo "Dropping database"
 	@cd cmd/database && go run main.go drop
 
@@ -37,5 +40,5 @@ migrate:
 	@cd cmd/database && go run main.go 
 
 create-test-user:
-	@echo "Creating a new user..."
+	@echo "Creating test users..."
 	@cd cmd/database && go run main.go testuser
