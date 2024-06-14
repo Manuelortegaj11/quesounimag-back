@@ -35,3 +35,7 @@ drop-table:
 migrate:
 	@echo "Running migrations... "
 	@cd cmd/database && go run main.go 
+
+create-test-user:
+	@echo "Creating a new user..."
+	@cd cmd/database && go run main.go testuser

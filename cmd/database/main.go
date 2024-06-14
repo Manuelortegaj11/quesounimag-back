@@ -37,6 +37,15 @@ func main() {
         return
     }
 
+
+    if len(os.Args) > 1 && os.Args[1] == "testuser" {
+        if err := config.CreateTestUser(db); err != nil {
+            log.Fatalf("failed to create user: %v", err)
+        }
+        log.Println("All test users created successfully")
+        return
+    }
+
     if _, err := config.Migrate(db); err != nil {
         log.Fatalf("failed to migrate database: %v", err)
     }

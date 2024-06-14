@@ -2,87 +2,119 @@
 package config
 
 import (
-    "gorm.io/driver/mysql"
-    "gorm.io/gorm"
-    "proyectoqueso/models"
-    "os"
+	"log"
+	"os"
+	"proyectoqueso/models"
+	"proyectoqueso/security"
+
+	"github.com/google/uuid"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
 var (
-  db *gorm.DB
-  err error
-  )
+	db  *gorm.DB
+	err error
+)
 
-func InitDB(db *gorm.DB) (*gorm.DB) {
-  NewDB()
-  Migrate(db)
-  return db 
+func InitDB(db *gorm.DB) *gorm.DB {
+	NewDB()
+	Migrate(db)
+	return db
 }
 
 func NewDB() (*gorm.DB, error) {
 
-    dbHost := os.Getenv("DB_HOST")
-    dbPort := os.Getenv("DB_PORT")
-    dbUser := os.Getenv("DB_USER")
-    dbPassword := os.Getenv("DB_PASSWORD")
-    dbName := os.Getenv("DB_NAME")
+	dbHost := os.Getenv("DB_HOST")
+	dbPort := os.Getenv("DB_PORT")
+	dbUser := os.Getenv("DB_USER")
+	dbPassword := os.Getenv("DB_PASSWORD")
+	dbName := os.Getenv("DB_NAME")
 
-    dsn := dbUser + ":" + dbPassword + "@tcp(" + dbHost + ":" + dbPort + ")/" + dbName + "?charset=utf8mb4&parseTime=True&loc=Local"
-    db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
-    if err != nil {
-        return nil, err
-    }
-    return db, nil
+	dsn := dbUser + ":" + dbPassword + "@tcp(" + dbHost + ":" + dbPort + ")/" + dbName + "?charset=utf8mb4&parseTime=True&loc=Local"
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
 }
 
-func Migrate(db *gorm.DB) (*gorm.DB, error){
-    if err := db.AutoMigrate(
-    &models.User{}, 
-    &models.Role{}, 
-    &models.Permission{}, 
-    &models.UserRole{}, 
-    &models.RolePermission{}, 
-    &models.UserPermission{}, 
-    &models.Product{}, 
-    &models.Payment{}, 
-    &models.Order{},
-    &models.Category{},
-    ); 
+func Migrate(db *gorm.DB) (*gorm.DB, error) {
+	if err := db.AutoMigrate(
+		&models.User{},
+		&models.Role{},
+		&models.Permission{},
+		&models.UserRole{},
+		&models.RolePermission{},
+		&models.UserPermission{},
+		&models.Product{},
+		&models.Payment{},
+		&models.Order{},
+		&models.OrdersDetail{},
+		&models.Category{},
+	); err != nil {
+		return nil, err
+	}
 
-    err != nil {
-        return nil, err 
-    }
+	db.Model(&models.Order{}).Association("User")
+	db.Model(&models.Order{}).Association("Product")
+	db.Model(&models.Payment{}).Association("User")
+	db.Model(&models.Payment{}).Association("Product")
 
-    db.Model(&models.Order{}).Association("User")
-    db.Model(&models.Order{}).Association("Product")
-    db.Model(&models.Payment{}).Association("User")
-    db.Model(&models.Payment{}).Association("Product")
-
-    return db, nil
+	return db, nil
 }
 
 func DropAllTables(db *gorm.DB) error {
-    var err error
-    tables := []interface{}{
-        &models.User{}, 
-        &models.Role{}, 
-        &models.Permission{}, 
-        &models.UserRole{}, 
-        &models.RolePermission{}, 
-        &models.UserPermission{}, 
-        &models.Product{}, 
-        &models.Payment{}, 
-        &models.Order{},
-        &models.Category{},
-    }
+	var err error
+	tables := []interface{}{
+		&models.User{},
+		&models.Role{},
+		&models.Permission{},
+		&models.UserRole{},
+		&models.RolePermission{},
+		&models.UserPermission{},
+		&models.Product{},
+		&models.Payment{},
+		&models.Order{},
+		&models.OrdersDetail{},
+		&models.Category{},
+	}
 
-    for _, table := range tables {
-        if err = db.Migrator().DropTable(table); err != nil {
-            return err
-        }
-    }
+	for _, table := range tables {
+		if err = db.Migrator().DropTable(table); err != nil {
+			return err
+		}
+	}
 
-    return nil
+	return nil
 }
 
+func CreateTestUser(db *gorm.DB) error {
 
+	hashedPassword, err := security.EncryptPassword("123456")
+	if err != nil {
+		log.Fatal("Error encrypting password: ", err)
+		return err
+	}
+
+	users := []models.User{
+		{
+			ID:        uuid.New(),
+			FirstName: "John Doe",
+			Email:     "john@example.com",
+			Password:  string(hashedPassword),
+		},
+		{
+			ID:        uuid.New(),
+			FirstName: "Jane Smith",
+			Email:     "jane@example.com",
+			Password:  string(hashedPassword),
+		},
+	}
+	for i := range users {
+		if err := db.Create(&users[i]).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}

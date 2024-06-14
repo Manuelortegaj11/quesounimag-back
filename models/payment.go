@@ -13,10 +13,3 @@ type Payment struct {
 	User      User    `gorm:"foreignKey:UserID"`
 	Product   Product `gorm:"foreignKey:ProductID"`
 }
-
-// type Domain struct {
-// 	gorm.Model
-// 	UserID uuid.UUID `gorm:"type:char(36)"`
-// 	Name   string    `gorm:"unique"`
-// 	User   User      `gorm:"foreignKey:UserID"`
-// }
