@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"proyectoqueso/models"
@@ -46,7 +47,7 @@ func (au *AuthController) RegisterUser(c echo.Context) error {
 			return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
 		}
 
-  c.Logger().Printf("Request Body: %+v", requestBody) 
+  log.Printf("Request Body: %+v", requestBody) // Agrega esta línea para imprimir el request body
 
 	requiredFields := []string{"birthday", "country", "state", "city", "email", "password", "firstName", "lastName", "phoneNumber", "streetAddress", "postalCode"}
 	for _, field := range requiredFields {
