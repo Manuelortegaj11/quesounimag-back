@@ -46,6 +46,8 @@ func (au *AuthController) RegisterUser(c echo.Context) error {
 			return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
 		}
 
+  c.Logger().Printf("Request Body: %+v", requestBody) 
+
 	requiredFields := []string{"birthday", "country", "state", "city", "email", "password", "firstName", "lastName", "phoneNumber", "streetAddress", "postalCode"}
 	for _, field := range requiredFields {
 		if _, ok := requestBody[field]; !ok {
