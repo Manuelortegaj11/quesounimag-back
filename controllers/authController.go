@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"proyectoqueso/models"
@@ -43,11 +42,9 @@ func GenerateCode() {
 func (au *AuthController) RegisterUser(c echo.Context) error {
 
 	requestBody := map[string]interface{}{}
-		if err := c.Bind(&requestBody); err != nil {
-			return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
-		}
-
-  log.Printf("Request Body: %+v", requestBody) // Agrega esta línea para imprimir el request body
+	if err := c.Bind(&requestBody); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
+	}
 
 	requiredFields := []string{"birthday", "country", "state", "city", "email", "password", "firstName", "lastName", "phoneNumber", "streetAddress", "postalCode"}
 	for _, field := range requiredFields {
@@ -61,7 +58,7 @@ func (au *AuthController) RegisterUser(c echo.Context) error {
 	firstName := requestBody["firstName"].(string)
 	lastName := requestBody["lastName"].(string)
 	phoneNumber := requestBody["phoneNumber"].(string)
-	birthday := requestBody["birthday"].(string) 
+	birthday := requestBody["birthday"].(string)
 	streetAddress := requestBody["streetAddress"].(string)
 	postalCode := requestBody["postalCode"].(string)
 	country := requestBody["country"].(string)
