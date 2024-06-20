@@ -14,18 +14,25 @@ type User struct {
 	FirstName          string
 	LastName           string
 	Birthday           string
-	PhoneNumber        string
-	Country            string
-	State              string
-	City               string
-	StreetAddress      string
-	PostalCode         string
 	LanguagePreference string
 	CurrencyPreference string
-	Roles              []Role       `gorm:"many2many:user_roles;"`
-	Permissions        []Permission `gorm:"many2many:user_permissions;"`
+	Roles              []Role        `gorm:"many2many:user_roles;"`
+	Permissions        []Permission  `gorm:"many2many:user_permissions;"`
+	Addresses          []UserAddress // One-to-many relationship
 	ConfirmationCode   string
 	IsConfirmed        bool `gorm:"default:false"`
+}
+
+type UserAddress struct {
+	gorm.Model
+	UserID        uuid.UUID `gorm:"type:char(36);index"`
+	PhoneNumber   string
+	Country       string
+	State         string
+	City          string
+	StreetAddress string
+	PostalCode    string
+	User          User `gorm:"foreignKey:UserID"`
 }
 
 type Role struct {
@@ -42,7 +49,7 @@ type Permission struct {
 }
 
 type UserRole struct {
-	UserID int
+	UserID uuid.UUID
 	RoleID int
 }
 

@@ -40,33 +40,34 @@ func GenerateCode() {
 }
 
 func (au *AuthController) RegisterUser(c echo.Context) error {
-	// c.Logger().Info(config.GetEnv("JWT_SECRET"))
-	// JSON body
-	var requestBody map[string]interface{}
 
-	if err := c.Bind(&requestBody); err != nil {
-		return err
+	requestBody := map[string]interface{}{}
+		if err := c.Bind(&requestBody); err != nil {
+			return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
+		}
+
+	requiredFields := []string{"birthday", "country", "state", "city", "email", "password", "firstName", "lastName", "phoneNumber", "streetAddress", "postalCode"}
+	for _, field := range requiredFields {
+		if _, ok := requestBody[field]; !ok {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Missing %s field", field))
+		}
 	}
 
-	if requestBody == nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Missing JSON body")
-	}
-
-	// if _, ok := requestBody["name"]; !ok {
-	// 	return echo.NewHTTPError(http.StatusBadRequest, "Missing name field")
-	// }
-
-	if _, ok := requestBody["email"]; !ok {
-		return echo.NewHTTPError(http.StatusBadRequest, "Missing email field")
-	}
-
-	if _, ok := requestBody["password"]; !ok {
-		return echo.NewHTTPError(http.StatusBadRequest, "Missing password field")
-	}
-
-	// name := requestBody["name"].(string)
 	email := requestBody["email"].(string)
 	password := requestBody["password"].(string)
+	firstName := requestBody["firstName"].(string)
+	lastName := requestBody["lastName"].(string)
+	phoneNumber := requestBody["phoneNumber"].(string)
+	birthday := requestBody["birthday"].(string) 
+	streetAddress := requestBody["streetAddress"].(string)
+	postalCode := requestBody["postalCode"].(string)
+	country := requestBody["country"].(string)
+	state := requestBody["state"].(string)
+	city := requestBody["city"].(string)
+
+	if _, err := time.Parse("2006-01-02", birthday); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid date format. Use yyyy-mm-dd.")
+	}
 
 	match, err := util.IsValidEmail(email)
 	if err != nil {
@@ -98,13 +99,27 @@ func (au *AuthController) RegisterUser(c echo.Context) error {
 		}
 
 		// Create user with data of the Request
+		newUserID := uuid.New()
 		newUser := &models.User{
-			ID: uuid.New(),
-			// FirstName: name,
+			ID:               newUserID,
 			Email:            email,
 			Password:         string(hashedPassword),
+			FirstName:        firstName,
+			LastName:         lastName,
+			Birthday:         birthday,
 			ConfirmationCode: confirmationCode,
 			IsConfirmed:      false,
+			Addresses: []models.UserAddress{
+				{
+					UserID:        newUserID,
+					PhoneNumber:   phoneNumber,
+					Country:       country,
+					State:         state,
+					City:          city,
+					StreetAddress: streetAddress,
+					PostalCode:    postalCode,
+				},
+			},
 		}
 
 		if err := au.DB.Create(newUser).Error; err != nil {
@@ -252,42 +267,42 @@ func (ac *AuthController) SessionUser(c echo.Context) error {
 }
 
 func (au *AuthController) ConfirmUser(c echo.Context) error {
-    var requestBody map[string]interface{}
+	var requestBody map[string]interface{}
 
-    if err := c.Bind(&requestBody); err != nil {
-        return err
-    }
+	if err := c.Bind(&requestBody); err != nil {
+		return err
+	}
 
-    if requestBody == nil {
-        return echo.NewHTTPError(http.StatusBadRequest, "Missing JSON body")
-    }
+	if requestBody == nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Missing JSON body")
+	}
 
-    if _, ok := requestBody["email"]; !ok {
-        return echo.NewHTTPError(http.StatusBadRequest, "Missing email field")
-    }
+	if _, ok := requestBody["email"]; !ok {
+		return echo.NewHTTPError(http.StatusBadRequest, "Missing email field")
+	}
 
-    if _, ok := requestBody["code"]; !ok {
-        return echo.NewHTTPError(http.StatusBadRequest, "Missing confirmation code field")
-    }
+	if _, ok := requestBody["code"]; !ok {
+		return echo.NewHTTPError(http.StatusBadRequest, "Missing confirmation code field")
+	}
 
-    email := requestBody["email"].(string)
-    confirmationCode := requestBody["code"].(string)
+	email := requestBody["email"].(string)
+	confirmationCode := requestBody["code"].(string)
 
-    var user models.User
-    if err := au.DB.Where("email = ? AND confirmation_code = ?", email, confirmationCode).First(&user).Error; err != nil {
-        return echo.NewHTTPError(http.StatusBadRequest, "Invalid email or confirmation code")
-    }
+	var user models.User
+	if err := au.DB.Where("email = ? AND confirmation_code = ?", email, confirmationCode).First(&user).Error; err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid email or confirmation code")
+	}
 
-    user.IsConfirmed = true
-    user.ConfirmationCode = ""
+	user.IsConfirmed = true
+	user.ConfirmationCode = ""
 
-    if err := au.DB.Save(&user).Error; err != nil {
-        return echo.NewHTTPError(http.StatusInternalServerError, "Failed to confirm user")
-    }
+	if err := au.DB.Save(&user).Error; err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to confirm user")
+	}
 
-    return c.JSON(http.StatusOK, map[string]string{
-        "message": "Account confirmed successfully",
-    })
+	return c.JSON(http.StatusOK, map[string]string{
+		"message": "Account confirmed successfully",
+	})
 }
 
 func (ac *AuthController) ResendConfirmationCode(c echo.Context) error {

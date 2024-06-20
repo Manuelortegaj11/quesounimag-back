@@ -42,6 +42,7 @@ func NewDB() (*gorm.DB, error) {
 func Migrate(db *gorm.DB) (*gorm.DB, error) {
 	if err := db.AutoMigrate(
 		&models.User{},
+    &models.UserAddress{},
 		&models.Role{},
 		&models.Permission{},
 		&models.UserRole{},
@@ -56,6 +57,7 @@ func Migrate(db *gorm.DB) (*gorm.DB, error) {
 		return nil, err
 	}
 
+	db.Model(&models.UserAddress{}).Association("User")
 	db.Model(&models.Order{}).Association("User")
 	db.Model(&models.Order{}).Association("Product")
 	db.Model(&models.Payment{}).Association("User")
@@ -68,6 +70,7 @@ func DropAllTables(db *gorm.DB) error {
 	var err error
 	tables := []interface{}{
 		&models.User{},
+    &models.UserAddress{},
 		&models.Role{},
 		&models.Permission{},
 		&models.UserRole{},
