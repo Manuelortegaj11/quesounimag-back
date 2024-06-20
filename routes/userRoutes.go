@@ -15,11 +15,15 @@ func SetupUserRoutes(e *echo.Echo, db *gorm.DB) {
 
     apiUsersGroup := e.Group("/v1/user")
     // apiUsersGroup.Use(middleware.JwtMiddleware)
-
     apiUsersGroup.GET("/me", userController.GetUserById)
     apiUsersGroup.POST("", userController.CreateUser)
-    // apiUsersGroup.GET("/:id", userController.GetUser)
-    // apiUsersGroup.PUT("/:id", userController.GetUser)
-    // apiUsersGroup.DELETE("/:id", userController.GetUser)
+
+}
+
+func SetupAddressRoutes(e *echo.Echo, db *gorm.DB){
+
+    userController := controllers.NewUserController(db)
+    apiAddressGroup := e.Group("/v1/address")
+    apiAddressGroup.GET("", userController.GetAllAddress)
 }
 

@@ -9,6 +9,7 @@ func InitRoute(e *echo.Echo, db *gorm.DB) {
 	SetupInitRoute(e, db)
 	SetupAuthRoutes(e, db)
 	SetupUserRoutes(e, db)
+  SetupAddressRoutes(e, db)
 	SetupAuthRoutes(e, db)
 	SetupPaymentRoutes(e, db)
 	SetupCategoryRoutes(e, db)
@@ -23,7 +24,6 @@ func SetupInitRoute(e *echo.Echo, db *gorm.DB) {
 			"message": "Xhlar S.A.S",
 		}
 
-		// Return JSON response with status OK (200)
 		return c.JSON(200, jsonResponse)
 	})
 }
