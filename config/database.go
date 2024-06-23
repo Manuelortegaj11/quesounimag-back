@@ -161,19 +161,50 @@ func CreateTestUsers(db *gorm.DB) error {
 	return nil
 }
 
-
 func DropTestUsers(db *gorm.DB) error {
-    // Define emails of test users
+    // Correos electrónicos de usuarios de prueba
     testUserEmails := []string{"john@example.com", "jane@example.com"}
 
-    // Delete users with specified emails
-    result := db.Where("email IN ?", testUserEmails).Delete(&models.User{})
-    if result.Error != nil {
-        return result.Error
+    // // Eliminar usuarios de prueba
+    if err := db.Where("email IN (?)", testUserEmails).Delete(&models.User{}).Error; err != nil {
+        return err
     }
 
-    // Log the number of rows affected
-    log.Printf("Deleted %d test users", result.RowsAffected)
+    // Obtener los UUIDs de todos los usuarios de prueba
+    var testUserUUIDs []string
+    if err := db.
+        Unscoped().
+        Model(&models.User{}).
+        Where("email IN (?)", testUserEmails).
+        Pluck("id", &testUserUUIDs).
+        Error; err != nil {
+        return err
+    }
+
+    // Imprimir los UUIDs obtenidos
+    for _, uuid := range testUserUUIDs {
+        log.Println("UUID de usuario de prueba:", uuid)
+    }
+
+    // Borrar permanentemente las direcciones (Unscoped)
+    if err := db.
+        Unscoped().
+        Where("user_id IN (?)", testUserUUIDs).
+        Delete(&models.UserAddress{}).
+        Error; err != nil {
+        return err
+    }
+
+    // Borrar permanentemente los usuarios eliminados (Unscoped)
+    if err := db.
+        Unscoped().
+        Where("email IN (?)", testUserEmails).
+        Delete(&models.User{}).
+        Error; err != nil {
+        return err
+    }
+
+    log.Println("Usuarios de prueba borrados permanentemente")
 
     return nil
 }

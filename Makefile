@@ -41,7 +41,7 @@ migrate:
 
 create-test-user:
 	@echo "Creating test users..."
-	@cd cmd/database && go run main.go createtestuser
+	@cd cmd/database && go run main.go createtestusers
 
 drop-test-user:
 	@echo "Deleting test users..."

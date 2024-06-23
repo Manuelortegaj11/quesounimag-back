@@ -49,7 +49,7 @@ func main() {
 		if err := config.DropTestUsers(db); err != nil {
       log.Fatalf("Error dropping test users: %v", err)
 		}
-		log.Println("All test users created successfully")
+		log.Println("All test users deleted successfully")
 		return
 	}
 
