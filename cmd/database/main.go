@@ -37,9 +37,17 @@ func main() {
 		return
 	}
 
-	if len(os.Args) > 1 && os.Args[1] == "testuser" {
-		if err := config.CreateTestUser(db); err != nil {
+	if len(os.Args) > 1 && os.Args[1] == "createtestusers" {
+		if err := config.CreateTestUsers(db); err != nil {
 			log.Fatalf("failed to create user: %v", err)
+		}
+		log.Println("All test users created successfully")
+		return
+	}
+
+	if len(os.Args) > 1 && os.Args[1] == "droptestusers" {
+		if err := config.DropTestUsers(db); err != nil {
+      log.Fatalf("Error dropping test users: %v", err)
 		}
 		log.Println("All test users created successfully")
 		return
