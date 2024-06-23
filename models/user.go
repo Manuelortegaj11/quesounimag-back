@@ -26,6 +26,7 @@ type User struct {
 type UserAddress struct {
 	gorm.Model
 	UserID        uuid.UUID `gorm:"type:char(36);index"`
+	FullName     string
 	PhoneNumber   string
 	Country       string
 	State         string

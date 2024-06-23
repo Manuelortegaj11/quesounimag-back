@@ -42,7 +42,7 @@ func NewDB() (*gorm.DB, error) {
 func Migrate(db *gorm.DB) (*gorm.DB, error) {
 	if err := db.AutoMigrate(
 		&models.User{},
-    &models.UserAddress{},
+		&models.UserAddress{},
 		&models.Role{},
 		&models.Permission{},
 		&models.UserRole{},
@@ -70,7 +70,7 @@ func DropAllTables(db *gorm.DB) error {
 	var err error
 	tables := []interface{}{
 		&models.User{},
-    &models.UserAddress{},
+		&models.UserAddress{},
 		&models.Role{},
 		&models.Permission{},
 		&models.UserRole{},
@@ -100,20 +100,49 @@ func CreateTestUser(db *gorm.DB) error {
 		return err
 	}
 
+	newUserID := uuid.New()
+	newUser2ID := uuid.New()
 	users := []models.User{
 		{
-			ID:        uuid.New(),
-			FirstName: "John Doe",
+			ID:        newUserID,
+			FirstName: "John",
+			LastName:  "Doe",
 			Email:     "john@example.com",
 			Password:  string(hashedPassword),
+			Addresses: []models.UserAddress{
+				{
+					UserID:        newUserID,
+					FullName:      "John Doe",
+					PhoneNumber:   "123456",
+					Country:       "United States",
+					State:         "California",
+					City:          "Los Angeles",
+					StreetAddress: "123 Main Street",
+					PostalCode:    "90210",
+				},
+			},
 		},
 		{
-			ID:        uuid.New(),
+			ID:        newUser2ID,
 			FirstName: "Jane Smith",
+			LastName:  "Smith",
 			Email:     "jane@example.com",
 			Password:  string(hashedPassword),
+			Addresses: []models.UserAddress{
+				{
+					UserID:        newUser2ID,
+					FullName:      "Jane Smith",
+					PhoneNumber:   "123456",
+					Country:       "United States",
+					State:         "California",
+					City:          "Los Angeles",
+					StreetAddress: "123 Main Street",
+					PostalCode:    "90210",
+				},
+			},
 		},
 	}
+
 	for i := range users {
 		if err := db.Create(&users[i]).Error; err != nil {
 			return err

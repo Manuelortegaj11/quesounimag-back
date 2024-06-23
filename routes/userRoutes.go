@@ -24,6 +24,7 @@ func SetupAddressRoutes(e *echo.Echo, db *gorm.DB){
 
     userController := controllers.NewUserController(db)
     apiAddressGroup := e.Group("/v1/address")
+    apiAddressGroup.OPTIONS("", userController.GetAllAddress)
     apiAddressGroup.GET("", userController.GetAllAddress)
 }
 

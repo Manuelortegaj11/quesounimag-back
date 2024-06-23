@@ -41,7 +41,7 @@ func (uc *UserController) GetUserById(c echo.Context) error {
 
 	// Parse the token without validating the signature
 	token, err := jwt.ParseWithClaims(tokenValue, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(jwtKey), nil // Replace "your-secret-key" with your actual secret key
+		return []byte(jwtKey), nil 
 	})
 	if err != nil {
 		// Handle the case where the token cannot be parsed
@@ -132,7 +132,7 @@ func (uc *UserController) GetAllAddress(c echo.Context) error {
 
 	// Analizar el token sin validar la firma
 	token, err := jwt.ParseWithClaims(tokenValue, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(jwtKey), nil // Reemplaza "your-secret-key" con tu clave secreta real
+		return []byte(jwtKey), nil 
 	})
 	if err != nil {
 		// Manejar el caso en que no se puede analizar el token
@@ -156,15 +156,6 @@ func (uc *UserController) GetAllAddress(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"message": "Invalid user ID format",
-		})
-	}
-
-	// Consultar el usuario en la base de datos usando GORM
-	var user models.User
-	if err := uc.DB.Where("id = ?", parsedUserID).First(&user).Error; err != nil {
-		// Manejar el caso en que no se encuentra el usuario con el ID dado
-		return c.JSON(http.StatusNotFound, map[string]string{
-			"message": "User not found",
 		})
 	}
 
