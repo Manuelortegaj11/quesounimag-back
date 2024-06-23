@@ -194,6 +194,9 @@ func (au *AuthController) LoginUser(c echo.Context) error {
 	cookie.Name = "token"
 	cookie.Value = token
 	cookie.Expires = OneWeek
+  cookie.Path = "/"
+  cookie.Domain = "quesocosteno.com"
+	cookie.Secure = true
 	cookie.HttpOnly = true
 	c.SetCookie(cookie)
 
