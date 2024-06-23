@@ -93,70 +93,74 @@ func DropAllTables(db *gorm.DB) error {
 }
 
 func CreateTestUser(db *gorm.DB) error {
+    // Define the users to create
+    hashedPassword, err := security.EncryptPassword("123456")
+    if err != nil {
+        log.Fatal("Error encrypting password: ", err)
+        return err
+    }
 
-	hashedPassword, err := security.EncryptPassword("123456")
-	if err != nil {
-		log.Fatal("Error encrypting password: ", err)
-		return err
-	}
+    users := []models.User{
+        {
+            FirstName: "John",
+            LastName:  "Doe",
+            Email:     "john@example.com",
+            Password:  string(hashedPassword),
+            Addresses: []models.UserAddress{
+                {
+                    FullName:      "John Doe",
+                    PhoneNumber:   "123456",
+                    Country:       "United States",
+                    State:         "California",
+                    City:          "Los Angeles",
+                    StreetAddress: "123 Main Street",
+                    PostalCode:    "90210",
+                },
+                {
+                    FullName:      "Jane Smith",
+                    PhoneNumber:   "654321",
+                    Country:       "Argentina",
+                    State:         "Buenos Aires",
+                    City:          "Buenos Aires",
+                    StreetAddress: "Calle 10",
+                    PostalCode:    "00000",
+                },
+            },
+        },
+        {
+            FirstName: "Jane",
+            LastName:  "Smith",
+            Email:     "jane@example.com",
+            Password:  string(hashedPassword),
+            Addresses: []models.UserAddress{
+                {
+                    FullName:      "Jane Smith",
+                    PhoneNumber:   "123456",
+                    Country:       "United States",
+                    State:         "California",
+                    City:          "Los Angeles",
+                    StreetAddress: "123 Main Street",
+                    PostalCode:    "90210",
+                },
+            },
+        },
+    }
 
-	newUserID := uuid.New()
-	newUser2ID := uuid.New()
-	users := []models.User{
-		{
-			ID:        newUserID,
-			FirstName: "John",
-			LastName:  "Doe",
-			Email:     "john@example.com",
-			Password:  string(hashedPassword),
-			Addresses: []models.UserAddress{
-				{
-					UserID:        newUserID,
-					FullName:      "John Doe",
-					PhoneNumber:   "123456",
-					Country:       "United States",
-					State:         "California",
-					City:          "Los Angeles",
-					StreetAddress: "123 Main Street",
-					PostalCode:    "90210",
-				},
-				{
-					UserID:        newUserID,
-					FullName:      "Jane Smith",
-					PhoneNumber:   "654321",
-					Country:       "Argentina ",
-					State:         "Buenos Aires",
-					City:          "Buenos aires ",
-					StreetAddress: "Calle 10",
-					PostalCode:    "00000",
-				},
-			},
-		},
-		{
-			ID:        newUser2ID,
-			FirstName: "Jane Smith",
-			LastName:  "Smith",
-			Email:     "jane@example.com",
-			Password:  string(hashedPassword),
-			Addresses: []models.UserAddress{
-				{
-					UserID:        newUser2ID,
-					FullName:      "Jane Smith",
-					PhoneNumber:   "123456",
-					Country:       "United States",
-					State:         "California",
-					City:          "Los Angeles",
-					StreetAddress: "123 Main Street",
-					PostalCode:    "90210",
-				},
-			},
-		},
-	}
+    // Loop through each user and check if it exists, delete if needed, then create
+    for i := range users {
+        var existingUser models.User
+        if err := db.Where("email = ?", users[i].Email).First(&existingUser).Error; err == nil {
+            // User exists, delete it
+            if err := db.Delete(&existingUser).Error; err != nil {
+                return err
+            }
+        }
 
-	for i := range users {
-		if err := db.Create(&users[i]).Error; err != nil {
-			return err
-		}
-	}
-	return nil
+        // Create the user
+        if err := db.Create(&users[i]).Error; err != nil {
+            return err
+        }
+    }
+
+    return nil
 }
