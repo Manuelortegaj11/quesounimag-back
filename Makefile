@@ -31,7 +31,7 @@ clean:
 	@$(GOCLEAN)
 	@rm -f $(BINARY_NAME)
 
-drop:
+drop-db:
 	@echo "Dropping database"
 	@cd cmd/database && go run main.go drop
 
@@ -39,10 +39,10 @@ migrate:
 	@echo "Running migrations... "
 	@cd cmd/database && go run main.go 
 
-create-test-user:
+create-test-users:
 	@echo "Creating test users..."
 	@cd cmd/database && go run main.go createtestusers
 
-drop-test-user:
+drop-test-users:
 	@echo "Deleting test users..."
 	@cd cmd/database && go run main.go droptestusers
