@@ -120,6 +120,16 @@ func CreateTestUser(db *gorm.DB) error {
 					StreetAddress: "123 Main Street",
 					PostalCode:    "90210",
 				},
+				{
+					UserID:        newUserID,
+					FullName:      "Jane Smith",
+					PhoneNumber:   "654321",
+					Country:       "Argentina ",
+					State:         "Buenos Aires",
+					City:          "Buenos aires ",
+					StreetAddress: "Calle 10",
+					PostalCode:    "00000",
+				},
 			},
 		},
 		{
