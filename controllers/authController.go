@@ -8,6 +8,7 @@ import (
 	"proyectoqueso/security"
 	"proyectoqueso/utils"
 	util "proyectoqueso/utils"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -223,22 +224,26 @@ func (ac *AuthController) LogoutUser(c echo.Context) error {
 }
 
 func (ac *AuthController) SessionUser(c echo.Context) error {
+	authHeader := c.Request().Header.Get("Authorization")
+	if authHeader == "" {
+		return c.JSON(http.StatusUnauthorized, map[string]string{
+			"message": "Authorization header not found",
+		})
+	}
 
-	cookie, err := c.Cookie("token")
-	if err != nil {
-		// Handle the case where the cookie is not found or other error occurs
+	// Extract the token from the header
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	if tokenString == "" {
 		return c.JSON(http.StatusUnauthorized, map[string]string{
 			"message": "Token not found",
 		})
 	}
-	tokenValue := cookie.Value
 
 	// Parse the token without validating the signature
-	token, err := jwt.ParseWithClaims(tokenValue, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(jwtKey), nil // Replace "your-secret-key" with your actual secret key
+	token, err := jwt.ParseWithClaims(tokenString, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
 	})
 	if err != nil {
-		// Handle the case where the token cannot be parsed
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"message": "Invalid token",
 		})
@@ -247,17 +252,15 @@ func (ac *AuthController) SessionUser(c echo.Context) error {
 	// Extract the user ID from the token claims
 	claims, ok := token.Claims.(*jwt.StandardClaims)
 	if !ok {
-		// Handle the case where the claims cannot be extracted
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"message": "Invalid token claims",
 		})
 	}
-	userID := claims.Issuer // This should be the user ID
+	userID := claims.Issuer
 
 	// Query the user from the database using GORM
 	var user models.User
 	if err := ac.DB.Where("id = ?", userID).First(&user).Error; err != nil {
-		// Handle the case where the user with the given ID is not found
 		return c.JSON(http.StatusNotFound, map[string]string{
 			"message": "User not found",
 		})
@@ -265,7 +268,6 @@ func (ac *AuthController) SessionUser(c echo.Context) error {
 
 	user.Password = ""
 
-	// Return the user data
 	return c.JSON(http.StatusOK, user)
 }
 
