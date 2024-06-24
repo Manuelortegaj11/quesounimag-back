@@ -4,6 +4,7 @@ package controllers
 import (
 	"net/http"
 	"proyectoqueso/models"
+	"strings"
 
 	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
@@ -120,31 +121,34 @@ func VerifyEmail(c echo.Context) error {
 }
 
 func (uc *UserController) GetAllAddress(c echo.Context) error {
-	// Obtener el token de la cookie
-	cookie, err := c.Cookie("token")
-	if err != nil {
-		// Manejar el caso en que no se encuentra la cookie o ocurre otro error
+	authHeader := c.Request().Header.Get("Authorization")
+	if authHeader == "" {
+		return c.JSON(http.StatusUnauthorized, map[string]string{
+			"message": "Authorization header not found",
+		})
+	}
+
+	// Extract the token from the header
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	if tokenString == "" {
 		return c.JSON(http.StatusUnauthorized, map[string]string{
 			"message": "Token not found",
 		})
 	}
-	tokenValue := cookie.Value
 
-	// Analizar el token sin validar la firma
-	token, err := jwt.ParseWithClaims(tokenValue, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(jwtKey), nil 
+	// Parse the token without validating the signature
+	token, err := jwt.ParseWithClaims(tokenString, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
 	})
 	if err != nil {
-		// Manejar el caso en que no se puede analizar el token
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"message": "Invalid token",
 		})
 	}
 
-	// Extraer el ID del usuario de las reclamaciones del token
+	// Extract the user ID from the token claims
 	claims, ok := token.Claims.(*jwt.StandardClaims)
 	if !ok {
-		// Manejar el caso en que no se pueden extraer las reclamaciones
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"message": "Invalid token claims",
 		})
