@@ -188,19 +188,20 @@ func (au *AuthController) LoginUser(c echo.Context) error {
 		})
 	}
 
-	// Set cookie
-	OneWeek := time.Now().Add(time.Hour * 24 * 7)
-	cookie := new(http.Cookie)
-	cookie.Name = "token"
-	cookie.Value = token
-	cookie.Expires = OneWeek
-  cookie.Domain = "quesocosteno.com"
-  cookie.Path = "/"
-	cookie.Secure = true
-	cookie.HttpOnly = true
-	c.SetCookie(cookie)
+	// // Set cookie
+	// OneWeek := time.Now().Add(time.Hour * 24 * 7)
+	// cookie := new(http.Cookie)
+	// cookie.Name = "token"
+	// cookie.Value = token
+	// cookie.Expires = OneWeek
+ //  cookie.Domain = "quesocosteno.com"
+ //  cookie.Path = "/"
+	// cookie.Secure = true
+	// cookie.HttpOnly = true
+	// c.SetCookie(cookie)
 
 	return c.JSON(http.StatusOK, map[string]string{
+    "token": token,
 		"message": "User Login successfully",
 	})
 }
