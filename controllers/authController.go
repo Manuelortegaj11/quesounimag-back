@@ -199,7 +199,6 @@ func (au *AuthController) LoginUser(c echo.Context) error {
 	c.SetCookie(cookie)
 
 	return c.JSON(http.StatusOK, map[string]string{
-    "token": token,
 		"message": "User Login successfully",
 	})
 }
