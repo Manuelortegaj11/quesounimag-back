@@ -113,6 +113,7 @@ func (au *AuthController) RegisterUser(c echo.Context) error {
 			Addresses: []models.UserAddress{
 				{
 					UserID:        newUserID,
+          FullName:      firstName + " " + lastName,
 					PhoneNumber:   phoneNumber,
 					Country:       country,
 					State:         state,
