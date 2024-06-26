@@ -7,7 +7,8 @@ import (
 )
 
 func GenerateConfirmationCode() string {
-    rand.Seed(time.Now().UnixNano())
-    code := rand.Intn(1000000)
+    source := rand.NewSource(time.Now().UnixNano())
+    r := rand.New(source)
+    code := r.Intn(1000000)
     return fmt.Sprintf("%06d", code)
 }

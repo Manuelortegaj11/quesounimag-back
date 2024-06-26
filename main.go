@@ -29,11 +29,12 @@ func main() {
 	// Middleware
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
-  e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-      AllowOrigins: []string{"https://quesocosteno.com"},
-      AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization}, 
-      AllowCredentials: true,
-  }))
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		// AllowOrigins:     []string{"http://localhost:3000"},
+		AllowOrigins:     []string{"https://quesocosteno.com"},
+		AllowHeaders:     []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
+		AllowCredentials: true,
+	}))
 
 	// Routes
 	routes.InitRoute(e, db)
