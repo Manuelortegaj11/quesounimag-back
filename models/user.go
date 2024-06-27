@@ -26,7 +26,7 @@ type User struct {
 type UserAddress struct {
 	gorm.Model
 	UserID        uuid.UUID `gorm:"type:char(36);index"`
-	FullName     string
+	FullName      string
 	PhoneNumber   string
 	Country       string
 	State         string
@@ -38,19 +38,17 @@ type UserAddress struct {
 
 type Role struct {
 	gorm.Model
-	Name        string `gorm:"unique"`
-	GuardName   string
+	Name        string       `gorm:"unique"`
 	Permissions []Permission `gorm:"many2many:role_permissions;"`
 }
 
 type Permission struct {
 	gorm.Model
-	Name      string `gorm:"unique"`
-	GuardName string
+	Name string `gorm:"unique"`
 }
 
 type UserRole struct {
-	UserID uuid.UUID
+	UserID uuid.UUID `gorm:"type:char(36)"`
 	RoleID int
 }
 
@@ -60,6 +58,6 @@ type RolePermission struct {
 }
 
 type UserPermission struct {
-	UserID       int
+	UserID       uuid.UUID `gorm:"type:char(36)"`
 	PermissionID int
 }

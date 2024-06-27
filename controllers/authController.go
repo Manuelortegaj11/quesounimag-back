@@ -261,7 +261,7 @@ func (ac *AuthController) SessionUser(c echo.Context) error {
 
 	// Query the user from the database using GORM
 	var user models.User
-	if err := ac.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+	if err := ac.DB.Preload("Roles").Preload("Permissions").Where("id = ?", userID).First(&user).Error; err != nil {
 		return c.JSON(http.StatusNotFound, map[string]string{
 			"message": "User not found",
 		})
