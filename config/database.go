@@ -157,6 +157,11 @@ func CreateTestUsers(db *gorm.DB) error {
 			LastName:  "Smith",
 			Email:     "jane@example.com",
 			Password:  string(hashedPassword),
+      Roles: []models.Role{
+        {
+          Name: "Administrador",
+        },
+      },
 			Addresses: []models.UserAddress{
 				{
 					UserID:        newUser2ID,
