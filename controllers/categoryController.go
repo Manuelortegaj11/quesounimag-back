@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"proyectoqueso/models"
 	"strconv"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 
@@ -19,8 +20,15 @@ func NewCategoryController(db *gorm.DB) *CategoryController {
 	return &CategoryController{DB: db}
 }
 
-func (au *CategoryController) CreateCategory(c echo.Context) error {
+func createSlug(name string) string {
+	// Convert to lowercase
+	slug := strings.ToLower(name)
+	// Replace spaces with hyphens
+	slug = strings.ReplaceAll(slug, " ", "-")
+	return slug
+}
 
+func (au *CategoryController) CreateCategory(c echo.Context) error {
 	var requestBody map[string]interface{}
 
 	if err := c.Bind(&requestBody); err != nil {
@@ -36,10 +44,10 @@ func (au *CategoryController) CreateCategory(c echo.Context) error {
 	}
 
 	name := requestBody["name"].(string)
+	slug := createSlug(name)
 
 	// Check if category already exists
 	var category models.Category
-
 	queryUser := au.DB.Where("name = ?", name).First(&category)
 
 	if queryUser.Error == nil {
@@ -48,6 +56,7 @@ func (au *CategoryController) CreateCategory(c echo.Context) error {
 
 	newCategory := &models.Category{
 		Name: name,
+		Slug: slug,
 	}
 
 	if err := au.DB.Create(newCategory).Error; err != nil {
@@ -60,8 +69,9 @@ func (au *CategoryController) CreateCategory(c echo.Context) error {
 }
 
 func (au *CategoryController) UpdateCategory(c echo.Context) error {
+	id := strings.Trim(c.Param("id"), "/")
 
-	var requestBody map[string]interface{}
+	var requestBody map[string]interface{} = make(map[string]interface{})
 
 	if err := c.Bind(&requestBody); err != nil {
 		return err
@@ -71,33 +81,33 @@ func (au *CategoryController) UpdateCategory(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Missing JSON body")
 	}
 
-	if _, ok := requestBody["oldName"]; !ok {
-		return echo.NewHTTPError(http.StatusBadRequest, "Missing oldName field")
+	if _, ok := requestBody["name"]; !ok {
+		return echo.NewHTTPError(http.StatusBadRequest, "Missing Name field")
 	}
 
-	if _, ok := requestBody["newName"]; !ok {
-		return echo.NewHTTPError(http.StatusBadRequest, "Missing newName field")
-	}
+	newName := requestBody["name"].(string)
+	slug := createSlug(newName)
 
-	newName := requestBody["newName"].(string)
-	oldName := requestBody["oldName"].(string)
+	c.Logger().Info("Category updated successfully", newName)
 
-	// Check if category already exists
+	// Check if category exists
 	var category models.Category
-
-	queryCategory := au.DB.Where("name = ?", oldName).First(&category)
+	queryCategory := au.DB.First(&category, id)
 
 	if queryCategory.Error != nil {
 		return echo.NewHTTPError(http.StatusNotFound, "Category not found")
 	}
 
-	queryExistCategory := au.DB.Where("name = ?", newName).First(&category)
+	// Check if the new name is already taken by another category
+	var existingCategory models.Category
+	queryExistCategory := au.DB.Where("name = ?", newName).First(&existingCategory)
 
-	if queryExistCategory.Error != nil {
-		return echo.NewHTTPError(http.StatusNotFound, "Category already exist")
+	if queryExistCategory.Error == nil && existingCategory.ID != category.ID {
+		return echo.NewHTTPError(http.StatusBadRequest, "Category with the new name already exists")
 	}
 
 	category.Name = newName
+	category.Slug = slug
 
 	if err := au.DB.Save(&category).Error; err != nil {
 		return err
@@ -109,32 +119,24 @@ func (au *CategoryController) UpdateCategory(c echo.Context) error {
 }
 
 func (au *CategoryController) DeleteCategory(c echo.Context) error {
-	var requestBody map[string]interface{}
+	// Obtener el ID de la categoría desde el parámetro de la URL
+	idParam := strings.Trim(c.Param("id"), "/")
 
-	if err := c.Bind(&requestBody); err != nil {
-		return err
+	// Verificar que el ID sea un número válido
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid category ID")
 	}
 
-	if requestBody == nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Missing JSON body")
-	}
-
-	if _, ok := requestBody["name"]; !ok {
-		return echo.NewHTTPError(http.StatusBadRequest, "Missing name field")
-	}
-
-	name := requestBody["name"].(string)
-
-	// Check if category exists
+	// Buscar la categoría por ID
 	var category models.Category
-
-	queryCategory := au.DB.Where("name = ?", name).First(&category)
+	queryCategory := au.DB.Where("id = ?", id).First(&category)
 
 	if queryCategory.Error != nil {
-			return echo.NewHTTPError(http.StatusNotFound, "Category not found")
-  }
+		return echo.NewHTTPError(http.StatusNotFound, "Category not found")
+	}
 
-	// Delete the category
+	// Eliminar la categoría
 	if err := au.DB.Delete(&category).Error; err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
