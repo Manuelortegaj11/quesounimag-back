@@ -3,7 +3,9 @@ package controllers
 import (
 	"net/http"
 	"proyectoqueso/models"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 
@@ -17,6 +19,16 @@ type ProductController struct {
 
 func NewProductController(db *gorm.DB) *ProductController {
 	return &ProductController{DB: db}
+}
+
+func generarSlug(nombre string) string {
+    // Convertir a minúsculas
+    slug := strings.ToLower(nombre)
+    // Reemplazar espacios y caracteres especiales con guiones
+    slug = regexp.MustCompile(`\s+`).ReplaceAllString(slug, "-")
+    // Remover caracteres no deseados
+    slug = regexp.MustCompile(`[^\w\-]`).ReplaceAllString(slug, "")
+    return slug
 }
 
 func (au *ProductController) CreateProduct(c echo.Context) error {
@@ -41,13 +53,18 @@ func (au *ProductController) CreateProduct(c echo.Context) error {
 		}
 	}
 
+	// Genera el slug a partir del nombre
+	name := requestBody["name"].(string)
+	slug := generarSlug(name)
+
 	// Crea un nuevo producto
 	newProduct := &models.Product{
-		Name:        requestBody["name"].(string),
+		Name:        name,
 		Description: requestBody["description"].(string),
 		Price:       requestBody["price"].(float64),
 		Stock:       int(requestBody["stock"].(float64)),
 		CategoryID:  int64(requestBody["category_id"].(float64)),
+		Slug:        slug, // Agrega el slug al producto
 	}
 
 	// Guarda el nuevo producto en la base de datos

@@ -7,6 +7,7 @@ import (
 type Product struct {
 	gorm.Model
 	Name        string
+  Slug        string
 	Description string
 	Price       float64
 	Stock       int
