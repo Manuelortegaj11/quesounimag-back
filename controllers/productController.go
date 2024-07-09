@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 	"proyectoqueso/models"
 	"regexp"
@@ -22,13 +23,13 @@ func NewProductController(db *gorm.DB) *ProductController {
 }
 
 func generarSlug(nombre string) string {
-    // Convertir a minúsculas
-    slug := strings.ToLower(nombre)
-    // Reemplazar espacios y caracteres especiales con guiones
-    slug = regexp.MustCompile(`\s+`).ReplaceAllString(slug, "-")
-    // Remover caracteres no deseados
-    slug = regexp.MustCompile(`[^\w\-]`).ReplaceAllString(slug, "")
-    return slug
+	// Convertir a minúsculas
+	slug := strings.ToLower(nombre)
+	// Reemplazar espacios y caracteres especiales con guiones
+	slug = regexp.MustCompile(`\s+`).ReplaceAllString(slug, "-")
+	// Remover caracteres no deseados
+	slug = regexp.MustCompile(`[^\w\-]`).ReplaceAllString(slug, "")
+	return slug
 }
 
 func (au *ProductController) CreateProduct(c echo.Context) error {
@@ -79,47 +80,61 @@ func (au *ProductController) CreateProduct(c echo.Context) error {
 }
 
 func (au *ProductController) UpdateProduct(c echo.Context) error {
+	id := strings.TrimPrefix(c.Param("id"), "/")
 
-	var requestBody map[string]interface{}
+	// Check if id is provided
+	if id == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Product ID is required")
+	}
 
+	productID, err := strconv.Atoi(id)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid product ID")
+	}
+
+	// Bind the incoming JSON data to a map
+	requestBody := map[string]interface{}{}
 	if err := c.Bind(&requestBody); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
 	}
 
-	if requestBody == nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Missing JSON body")
+	// Define required fields
+	requiredFields := []string{"category_id", "description", "name", "price", "stock"}
+	for _, field := range requiredFields {
+		if _, ok := requestBody[field]; !ok {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Missing %s field", field))
+		}
 	}
 
-	if _, ok := requestBody["oldName"]; !ok {
-		return echo.NewHTTPError(http.StatusBadRequest, "Missing oldName field")
+
+	// Extract fields from the request body
+	categoryID := int64(requestBody["category_id"].(float64))
+	description := requestBody["description"].(string)
+	name := requestBody["name"].(string)
+	slug := generarSlug(name)
+	price := float64(requestBody["price"].(float64))
+	stock := int(requestBody["stock"].(float64))
+
+	// Find the existing product
+	var existingProduct models.Product
+	if err := au.DB.First(&existingProduct, productID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return echo.NewHTTPError(http.StatusNotFound, "Product not found")
+		}
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	if _, ok := requestBody["newName"]; !ok {
-		return echo.NewHTTPError(http.StatusBadRequest, "Missing newName field")
-	}
+	// Update the product with new values
+	existingProduct.CategoryID = categoryID
+	existingProduct.Description = description
+	existingProduct.Name = name
+	existingProduct.Price = price
+	existingProduct.Stock = stock
+  existingProduct.Slug = slug 
 
-	newName := requestBody["newName"].(string)
-	oldName := requestBody["oldName"].(string)
-
-	// Check if category already exists
-	var category models.Category
-
-	queryCategory := au.DB.Where("name = ?", oldName).First(&category)
-
-	if queryCategory.Error != nil {
-		return echo.NewHTTPError(http.StatusNotFound, "Category not found")
-	}
-
-	queryExistCategory := au.DB.Where("name = ?", newName).First(&category)
-
-	if queryExistCategory.Error != nil {
-		return echo.NewHTTPError(http.StatusNotFound, "Category already exist")
-	}
-
-	category.Name = newName
-
-	if err := au.DB.Save(&category).Error; err != nil {
-		return err
+	// Save the updated product
+	if err := au.DB.Save(&existingProduct).Error; err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{
@@ -128,77 +143,103 @@ func (au *ProductController) UpdateProduct(c echo.Context) error {
 }
 
 func (au *ProductController) DeleteProduct(c echo.Context) error {
-	var requestBody map[string]interface{}
 
-	if err := c.Bind(&requestBody); err != nil {
-		return err
+	id := strings.TrimPrefix(c.Param("id"), "/")
+
+	// Check if id is provided
+	if id == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Product ID is required")
 	}
 
-	if requestBody == nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Missing JSON body")
+	productID, err := strconv.Atoi(id)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid product ID")
 	}
 
-	if _, ok := requestBody["name"]; !ok {
-		return echo.NewHTTPError(http.StatusBadRequest, "Missing name field")
-	}
-
-	name := requestBody["name"].(string)
-
-	// Check if category exists
-	var category models.Category
-
-	queryCategory := au.DB.Where("name = ?", name).First(&category)
-
-	if queryCategory.Error != nil {
-		return echo.NewHTTPError(http.StatusNotFound, "Category not found")
-	}
-
-	// Delete the category
-	if err := au.DB.Delete(&category).Error; err != nil {
+	// Delete the product by ID
+	var product models.Product
+	if err := au.DB.First(&product, productID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return echo.NewHTTPError(http.StatusNotFound, "Product not found")
+		}
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	return c.JSON(http.StatusOK, map[string]string{
-		"message": "Category deleted successfully",
-	})
+	if err := au.DB.Delete(&product).Error; err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, echo.Map{"message": "Product deleted successfully"})
 }
 
 func (au *ProductController) GetProducts(c echo.Context) error {
-	id := c.QueryParam("id")
-	slug := c.QueryParam("slug")
+    id := c.QueryParam("id")
+    slug := c.QueryParam("slug")
+    slugCategory := c.QueryParam("slugCategory")
+    page := c.QueryParam("page")
+    pageSize := c.QueryParam("pageSize")
+    search := c.QueryParam("search")
 
-	// Check if id is provided
-	if id != "" {
-		categoryID, err := strconv.Atoi(id)
-		if err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, "Invalid category ID")
-		}
+    // Parse page and pageSize into integers
+    var pageInt, pageSizeInt int
+    if page != "" {
+        pageInt, _ = strconv.Atoi(page)
+    } else {
+        pageInt = 1 // Default to page 1 if not provided
+    }
+    if pageSize != "" {
+        pageSizeInt, _ = strconv.Atoi(pageSize)
+    } else {
+        pageSizeInt = 10 // Default page size to 10 if not provided
+    }
 
-		// Retrieve a single category by ID
-		var category models.Category
-		if err := au.DB.First(&category, categoryID).Error; err != nil {
-			if err == gorm.ErrRecordNotFound {
-				return echo.NewHTTPError(http.StatusNotFound, "Category not found")
-			}
-			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-		}
-		return c.JSON(http.StatusOK, category)
-	}
+    // Offset calculation for pagination
+    offset := (pageInt - 1) * pageSizeInt
 
-	// Check if slug is provided
-	if slug != "" {
-		var categories []models.Category
-		if err := au.DB.Where("name LIKE ?", "%"+slug+"%").Find(&categories).Error; err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-		}
-		return c.JSON(http.StatusOK, categories)
-	}
+    // Check if id is provided
+    if id != "" {
+        var product models.Product
+        if err := au.DB.First(&product, id).Error; err != nil {
+            if err == gorm.ErrRecordNotFound {
+                return echo.NewHTTPError(http.StatusNotFound, "Product not found")
+            }
+            return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+        }
+        return c.JSON(http.StatusOK, product)
+    }
 
-	// Retrieve all categories if no ID or slug is provided
-	var categories []models.Category
-	if err := au.DB.Find(&categories).Error; err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-	}
+    // Check if slug is provided
+    if slug != "" {
+        var products []models.Product
+        if err := au.DB.Where("slug LIKE ?", "%"+slug+"%").Offset(offset).Limit(pageSizeInt).Find(&products).Error; err != nil {
+            return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+        }
+        return c.JSON(http.StatusOK, products)
+    }
 
-	return c.JSON(http.StatusOK, categories)
+    // Check if slugCategory is provided
+    if slugCategory != "" {
+        var products []models.Product
+        if err := au.DB.Joins("Category").Where("Category.slug = ?", slugCategory).Offset(offset).Limit(pageSizeInt).Find(&products).Error; err != nil {
+            return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+        }
+        return c.JSON(http.StatusOK, products)
+    }
+
+    // Check if search is provided
+    if search != "" {
+        var products []models.Product
+        if err := au.DB.Where("name LIKE ?", "%"+search+"%").Offset(offset).Limit(pageSizeInt).Find(&products).Error; err != nil {
+            return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+        }
+        return c.JSON(http.StatusOK, products)
+    }
+
+    // If neither id, slug, nor slugCategory is provided, return all products
+    var products []models.Product
+    if err := au.DB.Offset(offset).Limit(pageSizeInt).Find(&products).Error; err != nil {
+        return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+    }
+
+    return c.JSON(http.StatusOK, products)
 }

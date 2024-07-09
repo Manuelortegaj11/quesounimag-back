@@ -15,6 +15,7 @@ func InitRoute(e *echo.Echo, db *gorm.DB) {
 	SetupCategoryRoutes(e, db)
 	SetupProductRoutes(e, db)
 	SetupImagesRoutes(e, db)
+  SetupLocationRoutes(e, db)
 }
 
 func SetupInitRoute(e *echo.Echo, db *gorm.DB) {
