@@ -152,17 +152,13 @@ func CreateTestUsers(db *gorm.DB) error {
 				},
 			},
 		},
+    // SEGUNDO USUARIO
 		{
 			ID:        newUser3ID,
 			FirstName: "Michael ",
 			LastName:  "Smith",
 			Email:     "michael@example.com",
 			Password:  string(hashedPassword),
-      Roles: []models.Role{
-        {
-          Name: "Administrador",
-        },
-      },
 			Addresses: []models.UserAddress{
 				{
 					UserID:        newUser3ID,
@@ -176,6 +172,7 @@ func CreateTestUsers(db *gorm.DB) error {
 				},
 			},
 		},
+    // TERCER USUARIO
 		{
 			ID:        newUser2ID,
 			FirstName: "Jane Smith",
