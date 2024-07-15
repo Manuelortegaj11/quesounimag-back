@@ -102,6 +102,7 @@ func CreateTestUsers(db *gorm.DB) error {
 
 	newUserID := uuid.New()
 	newUser2ID := uuid.New()
+	newUser3ID := uuid.New()
 	users := []models.User{
 		{
 			ID:        newUserID,
@@ -152,6 +153,30 @@ func CreateTestUsers(db *gorm.DB) error {
 			},
 		},
 		{
+			ID:        newUser3ID,
+			FirstName: "Michael ",
+			LastName:  "Smith",
+			Email:     "michael@example.com",
+			Password:  string(hashedPassword),
+      Roles: []models.Role{
+        {
+          Name: "Administrador",
+        },
+      },
+			Addresses: []models.UserAddress{
+				{
+					UserID:        newUser3ID,
+					FullName:      "Michael Smith",
+					PhoneNumber:   "123456",
+					Country:       "United States",
+					State:         "California",
+					City:          "Los Angeles",
+					StreetAddress: "123 Main Street",
+					PostalCode:    "90210",
+				},
+			},
+		},
+		{
 			ID:        newUser2ID,
 			FirstName: "Jane Smith",
 			LastName:  "Smith",
@@ -187,7 +212,7 @@ func CreateTestUsers(db *gorm.DB) error {
 
 func DropTestUsers(db *gorm.DB) error {
     // Correos electrónicos de usuarios de prueba
-    testUserEmails := []string{"john@example.com", "jane@example.com"}
+    testUserEmails := []string{"john@example.com", "jane@example.com", "michael@example.com"}
 
     // // Eliminar usuarios de prueba
     if err := db.Where("email IN (?)", testUserEmails).Delete(&models.User{}).Error; err != nil {
