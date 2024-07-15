@@ -51,7 +51,7 @@ func Migrate(db *gorm.DB) (*gorm.DB, error) {
 		&models.Product{},
 		&models.Payment{},
 		&models.Order{},
-		&models.OrdersDetail{},
+		&models.OrderDetail{},
 		&models.Category{},
 	); err != nil {
 		return nil, err
@@ -79,7 +79,7 @@ func DropAllTables(db *gorm.DB) error {
 		&models.Product{},
 		&models.Payment{},
 		&models.Order{},
-		&models.OrdersDetail{},
+		&models.OrderDetail{},
 		&models.Category{},
 	}
 

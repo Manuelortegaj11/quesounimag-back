@@ -16,16 +16,16 @@ const (
 type Order struct {
 	gorm.Model
 	ID          uuid.UUID `gorm:"type:char(36);primary_key"`
-	UserID      uint
-	User        User `gorm:"foreignKey:UserID"`
+	UserID      uuid.UUID `gorm:"type:char(36);index"`
+	User        User      `gorm:"foreignKey:UserID"`
 	TotalAmount float64
 	Status      OrderStatus `gorm:"type:enum('pending', 'processing', 'completed');default:pending"`
 }
 
-type OrdersDetail struct {
+type OrderDetail struct {
 	gorm.Model
 	ID        int
-	OrderID   uint
+	OrderID   uuid.UUID `gorm:"type:char(36);index"`
 	ProductID uint
 	Quantity  int
 	Order     Order   `gorm:"foreignKey:OrderID"`
