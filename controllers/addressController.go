@@ -66,6 +66,28 @@ func (uc *AddressController) GetAllAddress(c echo.Context) error {
 		})
 	}
 
+	// Obtener el ID de la dirección desde el parámetro de la URL
+	addressID := c.QueryParam("id")
+	if addressID != "" {
+		// Convertir el addressID de string a int
+		addrID, err := strconv.Atoi(addressID)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "Invalid address ID")
+		}
+
+		// Consultar la dirección por ID directamente
+		var address models.UserAddress
+		if err := uc.DB.Where("id = ?", addrID).First(&address).Error; err != nil {
+			// Manejar el caso en que no se encuentra la dirección
+			return c.JSON(http.StatusNotFound, map[string]string{
+				"message": "Address not found",
+			})
+		}
+
+		// Devolver la dirección específica encontrada
+		return c.JSON(http.StatusOK, address)
+	}
+
 	// Consultar las direcciones del usuario
 	var addresses []models.UserAddress
 	if err := uc.DB.Where("user_id = ?", parsedUserID).Find(&addresses).Error; err != nil {
