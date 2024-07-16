@@ -167,7 +167,7 @@ func (au *OrderController) GetOrdersByUserID(c echo.Context) error {
 		var orderDetails []map[string]interface{}
 		for _, detail := range order.OrderDetails {
 			orderDetails = append(orderDetails, map[string]interface{}{
-				"odProdId":   detail.ID,
+				"odProdId":   detail.Product.ID,
 				"odQuantity": detail.Quantity,
 				"odPrice":    detail.Product.Price,
 			})
