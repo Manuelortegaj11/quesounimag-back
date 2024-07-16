@@ -15,11 +15,13 @@ const (
 
 type Order struct {
 	gorm.Model
-	ID          uuid.UUID `gorm:"type:char(36);primary_key"`
-	UserID      uuid.UUID `gorm:"type:char(36);index"`
-	User        User      `gorm:"foreignKey:UserID"`
-	TotalAmount float64
-	Status      OrderStatus `gorm:"type:enum('pending', 'processing', 'completed');default:pending"`
+	ID           uuid.UUID `gorm:"type:char(36);primary_key"`
+	UserID       uuid.UUID `gorm:"type:char(36);index"`
+	User         User      `gorm:"foreignKey:UserID"`
+	TotalAmount  float64
+	Status       OrderStatus   `gorm:"type:enum('pending', 'processing', 'completed');default:pending"`
+	OrderDetails []OrderDetail `gorm:"foreignKey:OrderID"`
+	OrderAddress OrderAddress  `gorm:"foreignKey:OrderID"`
 }
 
 type OrderDetail struct {
@@ -30,4 +32,11 @@ type OrderDetail struct {
 	Quantity  int
 	Order     Order   `gorm:"foreignKey:OrderID"`
 	Product   Product `gorm:"foreignKey:ProductID"`
+}
+
+type OrderAddress struct {
+	gorm.Model
+	OrderID       uuid.UUID   `gorm:"type:char(36);index"`
+	UserAddressID int         `gorm:"index"`
+	UserAddress   UserAddress `gorm:"foreignKey:UserAddressID"`
 }

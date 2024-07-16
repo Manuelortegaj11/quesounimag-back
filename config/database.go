@@ -52,6 +52,7 @@ func Migrate(db *gorm.DB) (*gorm.DB, error) {
 		&models.Payment{},
 		&models.Order{},
 		&models.OrderDetail{},
+		&models.OrderAddress{},
 		&models.Category{},
 	); err != nil {
 		return nil, err
@@ -59,9 +60,10 @@ func Migrate(db *gorm.DB) (*gorm.DB, error) {
 
 	db.Model(&models.UserAddress{}).Association("User")
 	db.Model(&models.Order{}).Association("User")
-	db.Model(&models.Order{}).Association("Product")
 	db.Model(&models.Payment{}).Association("User")
 	db.Model(&models.Payment{}).Association("Product")
+	db.Model(&models.OrderAddress{}).Association("Order")
+	db.Model(&models.OrderAddress{}).Association("UserAddress")
 
 	return db, nil
 }
@@ -80,6 +82,7 @@ func DropAllTables(db *gorm.DB) error {
 		&models.Payment{},
 		&models.Order{},
 		&models.OrderDetail{},
+		&models.OrderAddress{},
 		&models.Category{},
 	}
 

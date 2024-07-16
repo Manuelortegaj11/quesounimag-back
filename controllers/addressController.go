@@ -79,6 +79,60 @@ func (uc *AddressController) GetAllAddress(c echo.Context) error {
 	return c.JSON(http.StatusOK, addresses)
 }
 
+func (uc *AddressController) GetAddressByID(c echo.Context) error {
+    authHeader := c.Request().Header.Get("Authorization")
+    if authHeader == "" {
+        return c.JSON(http.StatusUnauthorized, map[string]string{
+            "message": "Authorization header not found",
+        })
+    }
+
+    // Extraer el token del encabezado
+    tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+    if tokenString == "" {
+        return c.JSON(http.StatusUnauthorized, map[string]string{
+            "message": "Token not found",
+        })
+    }
+
+    // Validar y parsear el token con la firma
+    token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+        // Verificar el método de firma
+        if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+            return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+        }
+        // Devolver la clave secreta utilizada para firmar
+        return jwtKey, nil
+    })
+    if err != nil {
+        return c.JSON(http.StatusBadRequest, map[string]string{
+            "message": "Invalid token",
+        })
+    }
+
+    // Verificar si el token es válido
+    if !token.Valid {
+        return c.JSON(http.StatusUnauthorized, map[string]string{
+            "message": "Token is not valid",
+        })
+    }
+
+    // Obtener el ID de la dirección desde el parámetro de la URL
+    addressID := c.QueryParam("id")
+
+    // Consultar la dirección por ID directamente
+    var address models.UserAddress
+    if err := uc.DB.Where("id = ?", addressID).First(&address).Error; err != nil {
+        // Manejar el caso en que no se encuentra la dirección
+        return c.JSON(http.StatusNotFound, map[string]string{
+            "message": "Address not found",
+        })
+    }
+
+    // Devolver la dirección encontrada
+    return c.JSON(http.StatusOK, address)
+}
+
 func (uc *AddressController) CreateAddress(c echo.Context) error {
 	authHeader := c.Request().Header.Get("Authorization")
 	if authHeader == "" {

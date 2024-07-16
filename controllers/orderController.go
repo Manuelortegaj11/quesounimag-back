@@ -69,15 +69,26 @@ func (au *OrderController) CreateOrder(c echo.Context) error {
 		})
 	}
 
-	// Ejemplo de creación de un nuevo objeto Order y guardado en la base de datos
+	ID_ORDER := uuid.New()
+
 	newOrder := &models.Order{
-		ID:          uuid.New(),
+		ID:          ID_ORDER,
 		UserID:      userID,
 		TotalAmount: float64(requestBody.OrderTotal),
 	}
 
+	newOrderAddress := &models.OrderAddress{
+		OrderID:       ID_ORDER,
+		UserAddressID: int(requestBody.OrderAddress.ID),
+	}
+
 	// Guarda la orden en la base de datos
 	if err := au.DB.Create(newOrder).Error; err != nil {
+		return err
+	}
+
+	// Guardar la orden y la direccion
+	if err := au.DB.Create(newOrderAddress).Error; err != nil {
 		return err
 	}
 
@@ -146,11 +157,31 @@ func (au *OrderController) GetOrdersByUserID(c echo.Context) error {
 
 	// Consultar las órdenes del usuario en la base de datos
 	var orders []models.Order
-	if err := au.DB.Where("user_id = ?", parsedUserID).Find(&orders).Error; err != nil {
+	if err := au.DB.Preload("OrderDetails.Product").Preload("OrderAddress").Where("user_id = ?", parsedUserID).Find(&orders).Error; err != nil {
 		return err
 	}
 
-	// Devolver las órdenes como respuesta JSON
-	return c.JSON(http.StatusOK, orders)
+	// Construir la respuesta personalizada
+	var orderResponses []map[string]interface{}
+	for _, order := range orders {
+		var orderDetails []map[string]interface{}
+		for _, detail := range order.OrderDetails {
+			orderDetails = append(orderDetails, map[string]interface{}{
+				"odProdId":   detail.ID,
+				"odQuantity": detail.Quantity,
+				"odPrice":    detail.Product.Price,
+			})
+		}
+		orderResponse := map[string]interface{}{
+      "ID":      order.ID,
+			"CreatedAt":    order.CreatedAt,
+			"orderTotal":   order.TotalAmount,
+			"orderDetails": orderDetails,
+			"orderAddress": order.OrderAddress.UserAddressID,
+		}
+		orderResponses = append(orderResponses, orderResponse)
+	}
 
+	// Devolver la respuesta personalizada como JSON
+	return c.JSON(http.StatusOK, orderResponses)
 }
