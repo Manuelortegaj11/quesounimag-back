@@ -31,3 +31,6 @@ go.work
 
 # Hot reloading
 .air.toml
+
+# Uploads files
+uploads/*

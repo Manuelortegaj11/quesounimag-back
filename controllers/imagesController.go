@@ -9,52 +9,66 @@ import (
 	"regexp"
 	"strings"
 
-	//"proyectoqueso/models"
-	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 )
 
 const (
 	maxFileSize = 10 << 20 // 10 MB
-	avatarDir   = "./uploads/avatars/"
 	productDir  = "./uploads/products/"
+	categoryDir = "./uploads/categories/"
+	avatarDir   = "./uploads/avatars/"
 )
 
-type Imagecontroller struct {
+type ImageController struct {
 	DB *gorm.DB
 }
 
-func NewImageController(db *gorm.DB) *Imagecontroller {
-	return &Imagecontroller{DB: db}
+func NewImageController(db *gorm.DB) *ImageController {
+	return &ImageController{DB: db}
 }
 
-func (au *Imagecontroller) GetImage(c echo.Context) error {
-	// Devuelve una respuesta JSON indicando que el producto se creó correctamente
-	return c.JSON(http.StatusOK, map[string]string{
-		"message": "Product created successfully",
-	})
+func (ic *ImageController) GetImage(c echo.Context) error {
+	imageType := c.Param("type")
+	imageId := c.Param("id")
+	var imageDir string
+
+	switch imageType {
+	case "product":
+		imageDir = productDir
+	case "category":
+		imageDir = categoryDir
+	case "avatar":
+		imageDir = avatarDir
+	default:
+		return c.String(http.StatusBadRequest, "Tipo de imagen no válido")
+	}
+
+	imagePath := filepath.Join(imageDir, imageId)
+
+	if _, err := os.Stat(imagePath); os.IsNotExist(err) {
+		return c.String(http.StatusNotFound, "Imagen no encontrada")
+	}
+
+	return c.File(imagePath)
 }
 
-func (au *Imagecontroller) UploadImage(c echo.Context) error {
-	// Devuelve una respuesta JSON indicando que el producto se creó correctamente
-	return c.JSON(http.StatusOK, map[string]string{
-		"message": "Product created successfully",
-	})
+func (ic *ImageController) UpdateImageProduct(c echo.Context) error {
+	imageId := c.Param("id")
+	return uploadImage(c, productDir, imageId)
 }
 
-// Handler para subir avatares
-func uploadAvatar(c echo.Context) error {
-	return uploadImage(c, avatarDir)
+func (ic *ImageController) UpdateImageCategory(c echo.Context) error {
+	imageId := c.Param("id")
+	return uploadImage(c, categoryDir, imageId)
 }
 
-// Handler para subir imágenes de productos
-func uploadProduct(c echo.Context) error {
-	return uploadImage(c, productDir)
+func (ic *ImageController) UpdateImageAvatar(c echo.Context) error {
+	imageId := c.Param("id")
+	return uploadImage(c, avatarDir, imageId)
 }
 
-// Función genérica para subir imágenes
-func uploadImage(c echo.Context, uploadDir string) error {
+func uploadImage(c echo.Context, uploadDir string, filename string) error {
 	// Verificar que el directorio de subida exista, de lo contrario crearlo
 	if _, err := os.Stat(uploadDir); os.IsNotExist(err) {
 		os.MkdirAll(uploadDir, os.ModePerm)
@@ -63,8 +77,11 @@ func uploadImage(c echo.Context, uploadDir string) error {
 	// Obtener el archivo de la solicitud
 	file, err := c.FormFile("image")
 	if err != nil {
+		fmt.Println("Error al obtener el archivo:", err)
 		return c.String(http.StatusBadRequest, "No se pudo obtener el archivo")
 	}
+
+	fmt.Println("Archivo recibido:", file.Filename)
 
 	// Verificar el tipo MIME del archivo
 	if file.Header.Get("Content-Type") != "image/jpeg" && file.Header.Get("Content-Type") != "image/png" {
@@ -86,8 +103,10 @@ func uploadImage(c echo.Context, uploadDir string) error {
 	// Sanitizar el nombre del archivo
 	sanitizedFilename := sanitizeFilename(file.Filename)
 
-	// Crear un nombre de archivo único
-	filename := fmt.Sprintf("%s%s", uuid.New().String(), filepath.Ext(sanitizedFilename))
+	// Si la extensión ya está presente, no la agregamos de nuevo
+	if !strings.HasSuffix(filename, filepath.Ext(sanitizedFilename)) {
+		filename += filepath.Ext(sanitizedFilename)
+	}
 
 	// Crear un destino en el servidor para guardar el archivo
 	dst, err := os.Create(filepath.Join(uploadDir, filename))
