@@ -197,6 +197,7 @@ func (au *OrderController) GetOrdersByUserID(c echo.Context) error {
 			"orderTotal":   order.TotalAmount,
 			"orderDetails": orderDetails,
 			"orderAddress": order.OrderAddress.UserAddressID,
+			"orderStatus":  order.Status,
 		}
 		orderResponses = append(orderResponses, orderResponse)
 	}
