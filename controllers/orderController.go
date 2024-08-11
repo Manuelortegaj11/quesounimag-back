@@ -3,6 +3,7 @@ package controllers
 import (
 	"net/http"
 	"proyectoqueso/models"
+	"strconv"
 	"strings"
 	"time"
 
@@ -53,10 +54,6 @@ func (au *OrderController) CreateOrder(c echo.Context) error {
 		return err
 	}
 
-	// c.Logger().Info("Recibiendo fecha de la orden", requestBody.OrderDate)
-	// c.Logger().Info("Recibiendo fecha id del usuario orden", requestBody.OrderAddress.UserID)
-
-	// Verifica si se proporciona el campo orderTotal en el cuerpo de la solicitud
 	if requestBody.OrderTotal == 0 {
 		return echo.NewHTTPError(http.StatusBadRequest, "Missing orderTotal field")
 	}
@@ -82,12 +79,10 @@ func (au *OrderController) CreateOrder(c echo.Context) error {
 		UserAddressID: int(requestBody.OrderAddress.ID),
 	}
 
-	// Guarda la orden en la base de datos
 	if err := au.DB.Create(newOrder).Error; err != nil {
 		return err
 	}
 
-	// Guardar la orden y la direccion
 	if err := au.DB.Create(newOrderAddress).Error; err != nil {
 		return err
 	}
@@ -104,12 +99,36 @@ func (au *OrderController) CreateOrder(c echo.Context) error {
 		if err := au.DB.Create(newOrderDetail).Error; err != nil {
 			return err
 		}
+
+		// Actualizar el stock del producto
+		var product models.Product
+		if err := au.DB.First(&product, detail.ODProdID).Error; err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"message": "Product not found",
+			})
+		}
+
+		// Descontar la cantidad solicitada del stock
+		product.Stock -= detail.ODQuantity
+
+		// Verificar que el stock no sea negativo
+		if product.Stock < 0 {
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"message": "Insufficient stock for product ID " + strconv.Itoa(detail.ODProdID),
+			})
+		}
+
+		// Guardar los cambios en el producto
+		if err := au.DB.Save(&product).Error; err != nil {
+			return err
+		}
+
 	}
 
-	// Devuelve una respuesta JSON indicando que el pedido se creó correctamente
 	return c.JSON(http.StatusOK, map[string]string{
 		"message": "Order created successfully",
 	})
+
 }
 
 func (au *OrderController) GetOrdersByUserID(c echo.Context) error {
@@ -173,7 +192,7 @@ func (au *OrderController) GetOrdersByUserID(c echo.Context) error {
 			})
 		}
 		orderResponse := map[string]interface{}{
-      "ID":      order.ID,
+			"ID":           order.ID,
 			"CreatedAt":    order.CreatedAt,
 			"orderTotal":   order.TotalAmount,
 			"orderDetails": orderDetails,
