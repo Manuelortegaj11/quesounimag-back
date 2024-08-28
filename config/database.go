@@ -53,7 +53,6 @@ var modelsToMigrate = []interface{}{
 	&models.OrderDetail{},
 	&models.OrderAddress{},
 	&models.Category{},
-	&models.CollectionCenterInventory{},
 	&models.CollectionCenter{},
 }
 
@@ -73,17 +72,11 @@ func Migrate(db *gorm.DB) (*gorm.DB, error) {
 }
 
 func DropAllTables(db *gorm.DB) error {
-	var err error
-	tables := []interface{}{
-    modelsToMigrate,
-	}
-
-	for _, table := range tables {
-		if err = db.Migrator().DropTable(table); err != nil {
+	for _, model := range modelsToMigrate {
+		if err := db.Migrator().DropTable(model); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
