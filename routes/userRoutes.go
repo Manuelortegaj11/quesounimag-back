@@ -14,6 +14,7 @@ func SetupUserRoutes(e *echo.Echo, db *gorm.DB) {
 
 	apiUsersGroup := e.Group("/v1/user")
 	// apiUsersGroup.Use(middleware.JwtMiddleware)
+	apiUsersGroup.GET("", userController.GetAllUsers)
 	apiUsersGroup.GET("/me", userController.GetUserById)
 	apiUsersGroup.POST("", userController.CreateUser)
 

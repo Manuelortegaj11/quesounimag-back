@@ -39,22 +39,26 @@ func NewDB() (*gorm.DB, error) {
 	return db, nil
 }
 
+var modelsToMigrate = []interface{}{
+	&models.User{},
+	&models.UserAddress{},
+	&models.Role{},
+	&models.Permission{},
+	&models.UserRole{},
+	&models.RolePermission{},
+	&models.UserPermission{},
+	&models.Product{},
+	&models.Payment{},
+	&models.Order{},
+	&models.OrderDetail{},
+	&models.OrderAddress{},
+	&models.Category{},
+	&models.CollectionCenterInventory{},
+	&models.CollectionCenter{},
+}
+
 func Migrate(db *gorm.DB) (*gorm.DB, error) {
-	if err := db.AutoMigrate(
-		&models.User{},
-		&models.UserAddress{},
-		&models.Role{},
-		&models.Permission{},
-		&models.UserRole{},
-		&models.RolePermission{},
-		&models.UserPermission{},
-		&models.Product{},
-		&models.Payment{},
-		&models.Order{},
-		&models.OrderDetail{},
-		&models.OrderAddress{},
-		&models.Category{},
-	); err != nil {
+	if err := db.AutoMigrate(modelsToMigrate...); err != nil {
 		return nil, err
 	}
 
@@ -71,19 +75,7 @@ func Migrate(db *gorm.DB) (*gorm.DB, error) {
 func DropAllTables(db *gorm.DB) error {
 	var err error
 	tables := []interface{}{
-		&models.User{},
-		&models.UserAddress{},
-		&models.Role{},
-		&models.Permission{},
-		&models.UserRole{},
-		&models.RolePermission{},
-		&models.UserPermission{},
-		&models.Product{},
-		&models.Payment{},
-		&models.Order{},
-		&models.OrderDetail{},
-		&models.OrderAddress{},
-		&models.Category{},
+    modelsToMigrate,
 	}
 
 	for _, table := range tables {

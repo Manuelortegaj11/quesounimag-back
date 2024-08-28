@@ -26,8 +26,23 @@ func (uc *UserController) CreateUser(c echo.Context) error {
 	return nil
 }
 
-func (uc *UserController) GetUsers(c echo.Context) error {
-	return c.JSON(http.StatusOK, "Get users")
+func (uc *UserController) GetAllUsers(c echo.Context) error {
+	// Query all users from the database with preloaded Roles and Permissions
+	var users []models.User
+	if err := uc.DB.Preload("Roles").Preload("Permissions").Find(&users).Error; err != nil {
+		// Handle the case where users cannot be retrieved
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "Could not retrieve users",
+		})
+	}
+
+	// Remove the password field from each user object for security
+	for i := range users {
+		users[i].Password = ""
+	}
+
+	// Return the list of users
+	return c.JSON(http.StatusOK, users)
 }
 
 // GetUserById retrieves a user by their ID
