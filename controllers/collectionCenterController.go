@@ -59,16 +59,9 @@ func (uc *CollectionCenterController) CreateCollectionCenter(c echo.Context) err
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid input"})
 	}
 
-	// Si UserID es nil, no se verifica la existencia del usuario
-	if center.UserID != nil && *center.UserID != uuid.Nil {
-		var user models.User
-		if err := uc.DB.First(&user, "id = ?", center.UserID).Error; err != nil {
-			return c.JSON(http.StatusBadRequest, map[string]string{"error": "User not found"})
-		}
-		center.User = &user // Asignar la dirección del valor a User
-	} else {
-		center.UserID = nil // Asegurar que UserID sea nulo si no fue proporcionado
-		center.User = nil   // Asegurar que User sea nulo si no se proporciona UserID
+	// Asegurarse de que UserID sea nulo si no fue proporcionado
+	if center.UserID != nil && *center.UserID == uuid.Nil {
+		center.UserID = nil
 	}
 
 	if err := uc.DB.Create(&center).Error; err != nil {
