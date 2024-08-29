@@ -68,7 +68,7 @@ func (uc *CollectionCenterController) CreateCollectionCenter(c echo.Context) err
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create collection center"})
 	}
 
-	return c.JSON(http.StatusCreated, center)
+	return c.JSON(http.StatusOK, center)
 }
 
 func (uc *CollectionCenterController) DeleteCollectionCenter(c echo.Context) error {
