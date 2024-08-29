@@ -62,8 +62,8 @@ func (au *ProductController) CreateProduct(c echo.Context) error {
 	newProduct := &models.Product{
 		Name:        name,
 		Description: requestBody["description"].(string),
-		Price:       requestBody["price"].(float64),
-		Stock:       int(requestBody["stock"].(float64)),
+		// Price:       requestBody["price"].(float64),
+		// Stock:       int(requestBody["stock"].(float64)),
 		CategoryID:  int64(requestBody["category_id"].(float64)),
 		Slug:        slug, // Agrega el slug al producto
 	}
@@ -99,7 +99,7 @@ func (au *ProductController) UpdateProduct(c echo.Context) error {
 	}
 
 	// Define required fields
-	requiredFields := []string{"category_id", "description", "name", "price", "stock"}
+	requiredFields := []string{"category_id", "description", "name"}
 	for _, field := range requiredFields {
 		if _, ok := requestBody[field]; !ok {
 			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Missing %s field", field))
@@ -112,8 +112,8 @@ func (au *ProductController) UpdateProduct(c echo.Context) error {
 	description := requestBody["description"].(string)
 	name := requestBody["name"].(string)
 	slug := generarSlug(name)
-	price := float64(requestBody["price"].(float64))
-	stock := int(requestBody["stock"].(float64))
+	// price := float64(requestBody["price"].(float64))
+	// stock := int(requestBody["stock"].(float64))
 
 	// Find the existing product
 	var existingProduct models.Product
@@ -128,8 +128,8 @@ func (au *ProductController) UpdateProduct(c echo.Context) error {
 	existingProduct.CategoryID = categoryID
 	existingProduct.Description = description
 	existingProduct.Name = name
-	existingProduct.Price = price
-	existingProduct.Stock = stock
+	// existingProduct.Price = price
+	// existingProduct.Stock = stock
   existingProduct.Slug = slug 
 
 	// Save the updated product
