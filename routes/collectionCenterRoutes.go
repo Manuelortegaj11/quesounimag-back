@@ -15,5 +15,6 @@ func SetupCollectionCenterRoutes(e *echo.Echo, db *gorm.DB) {
 	apiCollectionCenterGroup := e.Group("/v1/collectioncenter")
 	apiCollectionCenterGroup.GET("", collectionCenterController.GetAllCollectionCenter)
 	apiCollectionCenterGroup.POST("", collectionCenterController.CreateCollectionCenter)
+  apiCollectionCenterGroup.DELETE(":id", collectionCenterController.DeleteCollectionCenter)
 
 }

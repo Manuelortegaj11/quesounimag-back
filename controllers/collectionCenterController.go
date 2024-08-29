@@ -1,12 +1,15 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
+	"strings"
 
-	"gorm.io/gorm"
-	"github.com/labstack/echo/v4"
-	"github.com/google/uuid"
 	"proyectoqueso/models"
+
+	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 )
 
 type CollectionCenterController struct {
@@ -53,4 +56,29 @@ func (uc *CollectionCenterController) CreateCollectionCenter(c echo.Context) err
 	}
 
 	return c.JSON(http.StatusCreated, center)
+}
+
+func (uc *CollectionCenterController) DeleteCollectionCenter(c echo.Context) error {
+    id := c.Param("id")
+    fmt.Println("ID recibido:", id)
+
+    // Remover cualquier slash al inicio del ID
+    id = strings.TrimPrefix(id, "/")
+
+    var center models.CollectionCenter
+
+    // Buscar el centro de acopio por su ID
+    if err := uc.DB.First(&center, "id = ?", id).Error; err != nil {
+        if err == gorm.ErrRecordNotFound {
+            return c.JSON(http.StatusNotFound, map[string]string{"error": "Collection center not found"})
+        }
+        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to find collection center"})
+    }
+
+    // Eliminar el centro de acopio
+    if err := uc.DB.Delete(&center).Error; err != nil {
+        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to delete collection center"})
+    }
+
+    return c.JSON(http.StatusOK, map[string]string{"message": "Collection center deleted successfully"})
 }
