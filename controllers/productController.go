@@ -47,7 +47,7 @@ func (au *ProductController) CreateProduct(c echo.Context) error {
 	}
 
 	// Verifica si se proporcionan los campos necesarios en el cuerpo de la solicitud
-	requiredFields := []string{"name", "description", "price", "stock", "category_id"}
+	requiredFields := []string{"name", "description", "category_id"}
 	for _, field := range requiredFields {
 		if _, ok := requestBody[field]; !ok {
 			return echo.NewHTTPError(http.StatusBadRequest, "Missing "+field+" field")
