@@ -7,7 +7,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// SetupDomainRoutes configura las rutas relacionadas con los dominios
 func SetupCollectionCenterRoutes(e *echo.Echo, db *gorm.DB) {
 
 	collectionCenterController := controllers.NewCollectionCenterController(db)
@@ -17,5 +16,9 @@ func SetupCollectionCenterRoutes(e *echo.Echo, db *gorm.DB) {
 	apiCollectionCenterGroup.POST("", collectionCenterController.CreateCollectionCenter)
   apiCollectionCenterGroup.DELETE(":id", collectionCenterController.DeleteCollectionCenter)
   apiCollectionCenterGroup.PUT(":id", collectionCenterController.UpdateCollectionCenter)
+
+  // Inventarios centro de acopio
+	apiCollectionCenterGroup.POST("/inventory", collectionCenterController.CreateProductInInventory)
+	apiCollectionCenterGroup.GET("/inventory/total/:product_id", collectionCenterController.GetTotalProductQuantity)
 
 }

@@ -24,7 +24,8 @@ func NewCollectionCenterController(db *gorm.DB) *CollectionCenterController {
 func (uc *CollectionCenterController) GetAllCollectionCenter(c echo.Context) error {
 	var centers []models.CollectionCenter
 
-	if err := uc.DB.Preload("CollectionCenterInventory").Find(&centers).Error; err != nil {
+	// Preload de la relación con el usuario y el inventario
+	if err := uc.DB.Preload("CollectionCenterInventory").Preload("User").Find(&centers).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to retrieve collection centers"})
 	}
 
@@ -33,7 +34,7 @@ func (uc *CollectionCenterController) GetAllCollectionCenter(c echo.Context) err
 		ID                        uint                               `json:"ID"`
 		Name                      string                             `json:"Name"`
 		Location                  string                             `json:"Location"`
-		UserID                    *uuid.UUID                         `json:"user_id"`
+		UserID                    string                             `json:"user_id"` // Aquí se mantiene user_id pero con el nombre del usuario
 		CollectionCenterInventory []models.CollectionCenterInventory `json:"collection_center_inventory"`
 	}
 
@@ -43,7 +44,7 @@ func (uc *CollectionCenterController) GetAllCollectionCenter(c echo.Context) err
 			ID:                        center.ID,
 			Name:                      center.Name,
 			Location:                  center.Location,
-			UserID:                    center.UserID,
+			UserID:                    center.User.FirstName, // Se asigna el nombre del usuario al campo user_id
 			CollectionCenterInventory: center.CollectionCenterInventory,
 		})
 	}
@@ -142,4 +143,58 @@ func (uc *CollectionCenterController) UpdateCollectionCenter(c echo.Context) err
 
     // Retornar el centro de acopio actualizado
     return c.JSON(http.StatusOK, center)
+}
+
+
+// Input para el inventario
+type InventoryInput struct {
+	CollectionCenterID uint   `json:"collection_center_id"`
+	ProductName        string `json:"product_name"`
+	Quantity           uint   `json:"quantity"`
+}
+
+// Crear un producto en el inventario de un centro de acopio
+func (ctrl *CollectionCenterController) CreateProductInInventory(c echo.Context) error {
+	var input InventoryInput
+	if err := c.Bind(&input); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+	}
+
+	// Buscar o crear producto
+	var product models.Product
+	if err := ctrl.DB.Where("name = ?", input.ProductName).FirstOrCreate(&product, models.Product{Name: input.ProductName}).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create or find product"})
+	}
+
+	// Crear inventario para el centro de acopio
+	inventory := models.CollectionCenterInventory{
+		CollectionCenterID: input.CollectionCenterID,
+		ProductID:          product.ID,
+		Quantity:           input.Quantity,
+	}
+
+	if err := ctrl.DB.Create(&inventory).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create inventory record"})
+	}
+
+	return c.JSON(http.StatusOK, inventory)
+}
+
+// Obtener la cantidad total de un producto en todos los centros de acopio
+func (ctrl *CollectionCenterController) GetTotalProductQuantity(c echo.Context) error {
+	productID, err := strconv.Atoi(c.Param("product_id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid product ID"})
+	}
+
+	var totalQuantity uint
+	err = ctrl.DB.Model(&models.CollectionCenterInventory{}).
+		Where("product_id = ?", productID).
+		Select("SUM(quantity)").
+		Scan(&totalQuantity).Error
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to calculate total quantity"})
+	}
+
+	return c.JSON(http.StatusOK, map[string]uint{"total_quantity": totalQuantity})
 }
