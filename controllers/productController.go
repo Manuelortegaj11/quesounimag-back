@@ -47,7 +47,7 @@ func (au *ProductController) CreateProduct(c echo.Context) error {
 	}
 
 	// Verifica si se proporcionan los campos necesarios en el cuerpo de la solicitud
-	requiredFields := []string{"name", "description", "price", "stock", "category_id"}
+	requiredFields := []string{"name", "description", "category_id"}
 	for _, field := range requiredFields {
 		if _, ok := requestBody[field]; !ok {
 			return echo.NewHTTPError(http.StatusBadRequest, "Missing "+field+" field")
@@ -62,10 +62,10 @@ func (au *ProductController) CreateProduct(c echo.Context) error {
 	newProduct := &models.Product{
 		Name:        name,
 		Description: requestBody["description"].(string),
-		Price:       requestBody["price"].(float64),
-		Stock:       int(requestBody["stock"].(float64)),
-		CategoryID:  int64(requestBody["category_id"].(float64)),
-		Slug:        slug, // Agrega el slug al producto
+		// Price:       requestBody["price"].(float64),
+		// Stock:       int(requestBody["stock"].(float64)),
+		CategoryID: int64(requestBody["category_id"].(float64)),
+		Slug:       slug, // Agrega el slug al producto
 	}
 
 	// Guarda el nuevo producto en la base de datos
@@ -99,21 +99,20 @@ func (au *ProductController) UpdateProduct(c echo.Context) error {
 	}
 
 	// Define required fields
-	requiredFields := []string{"category_id", "description", "name", "price", "stock"}
+	requiredFields := []string{"category_id", "description", "name"}
 	for _, field := range requiredFields {
 		if _, ok := requestBody[field]; !ok {
 			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Missing %s field", field))
 		}
 	}
 
-
 	// Extract fields from the request body
 	categoryID := int64(requestBody["category_id"].(float64))
 	description := requestBody["description"].(string)
 	name := requestBody["name"].(string)
 	slug := generarSlug(name)
-	price := float64(requestBody["price"].(float64))
-	stock := int(requestBody["stock"].(float64))
+	// price := float64(requestBody["price"].(float64))
+	// stock := int(requestBody["stock"].(float64))
 
 	// Find the existing product
 	var existingProduct models.Product
@@ -128,9 +127,9 @@ func (au *ProductController) UpdateProduct(c echo.Context) error {
 	existingProduct.CategoryID = categoryID
 	existingProduct.Description = description
 	existingProduct.Name = name
-	existingProduct.Price = price
-	existingProduct.Stock = stock
-  existingProduct.Slug = slug 
+	// existingProduct.Price = price
+	// existingProduct.Stock = stock
+	existingProduct.Slug = slug
 
 	// Save the updated product
 	if err := au.DB.Save(&existingProduct).Error; err != nil {
@@ -173,73 +172,107 @@ func (au *ProductController) DeleteProduct(c echo.Context) error {
 }
 
 func (au *ProductController) GetProducts(c echo.Context) error {
-    id := c.QueryParam("id")
-    slug := c.QueryParam("slug")
-    slugCategory := c.QueryParam("slugCategory")
-    page := c.QueryParam("page")
-    pageSize := c.QueryParam("pageSize")
-    search := c.QueryParam("search")
+	id := c.QueryParam("id")
+	slug := c.QueryParam("slug")
+	slugCategory := c.QueryParam("slugCategory")
+	page := c.QueryParam("page")
+	pageSize := c.QueryParam("pageSize")
+	search := c.QueryParam("search")
 
-    // Parse page and pageSize into integers
-    var pageInt, pageSizeInt int
-    if page != "" {
-        pageInt, _ = strconv.Atoi(page)
-    } else {
-        pageInt = 1 // Default to page 1 if not provided
-    }
-    if pageSize != "" {
-        pageSizeInt, _ = strconv.Atoi(pageSize)
-    } else {
-        pageSizeInt = 10 // Default page size to 10 if not provided
-    }
+	// Parse page and pageSize into integers
+	var pageInt, pageSizeInt int
+	if page != "" {
+		pageInt, _ = strconv.Atoi(page)
+	} else {
+		pageInt = 1 // Default to page 1 if not provided
+	}
+	if pageSize != "" {
+		pageSizeInt, _ = strconv.Atoi(pageSize)
+	} else {
+		pageSizeInt = 10 // Default page size to 10 if not provided
+	}
 
-    // Offset calculation for pagination
-    offset := (pageInt - 1) * pageSizeInt
+	// Offset calculation for pagination
+	offset := (pageInt - 1) * pageSizeInt
 
-    // Check if id is provided
-    if id != "" {
-        var product models.Product
-        if err := au.DB.First(&product, id).Error; err != nil {
-            if err == gorm.ErrRecordNotFound {
-                return echo.NewHTTPError(http.StatusNotFound, "Product not found")
-            }
-            return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-        }
-        return c.JSON(http.StatusOK, product)
-    }
+	var totalItems int64
 
-    // Check if slug is provided
-    if slug != "" {
-        var products []models.Product
-        if err := au.DB.Where("slug LIKE ?", "%"+slug+"%").Offset(offset).Limit(pageSizeInt).Find(&products).Error; err != nil {
-            return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-        }
-        return c.JSON(http.StatusOK, products)
-    }
+	// Check if id is provided
+	if id != "" {
+		var product models.Product
+		if err := au.DB.First(&product, id).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return echo.NewHTTPError(http.StatusNotFound, "Product not found")
+			}
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+		return c.JSON(http.StatusOK, product)
+	}
 
-    // Check if slugCategory is provided
-    if slugCategory != "" {
-        var products []models.Product
-        if err := au.DB.Joins("Category").Where("Category.slug = ?", slugCategory).Offset(offset).Limit(pageSizeInt).Find(&products).Error; err != nil {
-            return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-        }
-        return c.JSON(http.StatusOK, products)
-    }
+	// Check if slug is provided
+	if slug != "" {
+		var products []models.Product
+		// Count total items
+		if err := au.DB.Model(&models.Product{}).Where("slug LIKE ?", "%"+slug+"%").Count(&totalItems).Error; err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+		// Apply pagination
+		if err := au.DB.Where("slug LIKE ?", "%"+slug+"%").Offset(offset).Limit(pageSizeInt).Find(&products).Error; err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"totalItems": totalItems,
+			"data":       products,
+		})
+	}
 
-    // Check if search is provided
-    if search != "" {
-        var products []models.Product
-        if err := au.DB.Where("name LIKE ?", "%"+search+"%").Offset(offset).Limit(pageSizeInt).Find(&products).Error; err != nil {
-            return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-        }
-        return c.JSON(http.StatusOK, products)
-    }
+	// Check if slugCategory is provided
+	if slugCategory != "" {
+		var products []models.Product
+		// Count total items
+		if err := au.DB.Joins("Category").Where("Category.slug = ?", slugCategory).Model(&models.Product{}).Count(&totalItems).Error; err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+		// Apply pagination
+		if err := au.DB.Joins("Category").Where("Category.slug = ?", slugCategory).Offset(offset).Limit(pageSizeInt).Find(&products).Error; err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"totalItems": totalItems,
+			"data":       products,
+		})
+	}
 
-    // If neither id, slug, nor slugCategory is provided, return all products
-    var products []models.Product
-    if err := au.DB.Offset(offset).Limit(pageSizeInt).Find(&products).Error; err != nil {
-        return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-    }
+	// Check if search is provided
+	if search != "" {
+		var products []models.Product
+		// Count total items
+		if err := au.DB.Model(&models.Product{}).Where("name LIKE ?", "%"+search+"%").Count(&totalItems).Error; err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+		// Apply pagination
+		if err := au.DB.Where("name LIKE ?", "%"+search+"%").Offset(offset).Limit(pageSizeInt).Find(&products).Error; err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"totalItems": totalItems,
+			"data":       products,
+		})
+	}
 
-    return c.JSON(http.StatusOK, products)
+	// If neither id, slug, nor slugCategory is provided, return all products
+	var products []models.Product
+	// Count total items
+	if err := au.DB.Model(&models.Product{}).Count(&totalItems).Error; err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	// Apply pagination
+	if err := au.DB.Offset(offset).Limit(pageSizeInt).Find(&products).Error; err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"totalItems": totalItems,
+		"data":       products,
+	})
 }
