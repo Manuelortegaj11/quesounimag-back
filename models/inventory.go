@@ -1,15 +1,14 @@
 package models
 
 import (
-	// "github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type CollectionCenterInventory struct {
-    gorm.Model
-    CollectionCenterID uint
-    CollectionCenter   CollectionCenter
-    ProductID          uint
-    Product            Product
-    Quantity           uint
+	gorm.Model
+	CollectionCenterID uint             `gorm:"not null"`
+	CollectionCenter   CollectionCenter `gorm:"foreignKey:CollectionCenterID"`
+	ProductID          uint             `gorm:"not null"`
+	Product            Product          `gorm:"foreignKey:ProductID"`
+	Quantity           int              `gorm:"not null"`
 }

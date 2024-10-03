@@ -48,6 +48,7 @@ var modelsToMigrate = []interface{}{
 	&models.RolePermission{},
 	&models.UserPermission{},
 	&models.Product{},
+	&models.CollectionCenterInventory{},
 	&models.Payment{},
 	&models.Order{},
 	&models.OrderDetail{},
@@ -98,25 +99,25 @@ func CreateTestUsers(db *gorm.DB) error {
 			LastName:  "Doe",
 			Email:     "john@example.com",
 			Password:  string(hashedPassword),
-      Roles: []models.Role{
-        {
-          Name: "Proveedor",
-        },
-      },
-      Permissions: []models.Permission{
-        {
-          Name: "create_products",
-        },
-        {
-          Name: "read_products",
-        },
-        {
-          Name: "update_products",
-        },
-        {
-          Name: "delete_products",
-        },
-      },
+			Roles: []models.Role{
+				{
+					Name: "Proveedor",
+				},
+			},
+			Permissions: []models.Permission{
+				{
+					Name: "create_products",
+				},
+				{
+					Name: "read_products",
+				},
+				{
+					Name: "update_products",
+				},
+				{
+					Name: "delete_products",
+				},
+			},
 			Addresses: []models.UserAddress{
 				{
 					UserID:        newUserID,
@@ -140,7 +141,7 @@ func CreateTestUsers(db *gorm.DB) error {
 				},
 			},
 		},
-    // SEGUNDO USUARIO
+		// SEGUNDO USUARIO
 		{
 			ID:        newUser3ID,
 			FirstName: "Michael ",
@@ -160,18 +161,18 @@ func CreateTestUsers(db *gorm.DB) error {
 				},
 			},
 		},
-    // TERCER USUARIO
+		// TERCER USUARIO
 		{
 			ID:        newUser2ID,
 			FirstName: "Jane Smith",
 			LastName:  "Smith",
 			Email:     "jane@example.com",
 			Password:  string(hashedPassword),
-      Roles: []models.Role{
-        {
-          Name: "Administrador",
-        },
-      },
+			Roles: []models.Role{
+				{
+					Name: "Administrador",
+				},
+			},
 			Addresses: []models.UserAddress{
 				{
 					UserID:        newUser2ID,
@@ -196,49 +197,49 @@ func CreateTestUsers(db *gorm.DB) error {
 }
 
 func DropTestUsers(db *gorm.DB) error {
-    // Correos electrónicos de usuarios de prueba
-    testUserEmails := []string{"john@example.com", "jane@example.com", "michael@example.com"}
+	// Correos electrónicos de usuarios de prueba
+	testUserEmails := []string{"john@example.com", "jane@example.com", "michael@example.com"}
 
-    // // Eliminar usuarios de prueba
-    if err := db.Where("email IN (?)", testUserEmails).Delete(&models.User{}).Error; err != nil {
-        return err
-    }
+	// // Eliminar usuarios de prueba
+	if err := db.Where("email IN (?)", testUserEmails).Delete(&models.User{}).Error; err != nil {
+		return err
+	}
 
-    // Obtener los UUIDs de todos los usuarios de prueba
-    var testUserUUIDs []string
-    if err := db.
-        Unscoped().
-        Model(&models.User{}).
-        Where("email IN (?)", testUserEmails).
-        Pluck("id", &testUserUUIDs).
-        Error; err != nil {
-        return err
-    }
+	// Obtener los UUIDs de todos los usuarios de prueba
+	var testUserUUIDs []string
+	if err := db.
+		Unscoped().
+		Model(&models.User{}).
+		Where("email IN (?)", testUserEmails).
+		Pluck("id", &testUserUUIDs).
+		Error; err != nil {
+		return err
+	}
 
-    // Imprimir los UUIDs obtenidos
-    for _, uuid := range testUserUUIDs {
-        log.Println("UUID de usuario de prueba:", uuid)
-    }
+	// Imprimir los UUIDs obtenidos
+	for _, uuid := range testUserUUIDs {
+		log.Println("UUID de usuario de prueba:", uuid)
+	}
 
-    // Borrar permanentemente las direcciones (Unscoped)
-    if err := db.
-        Unscoped().
-        Where("user_id IN (?)", testUserUUIDs).
-        Delete(&models.UserAddress{}).
-        Error; err != nil {
-        return err
-    }
+	// Borrar permanentemente las direcciones (Unscoped)
+	if err := db.
+		Unscoped().
+		Where("user_id IN (?)", testUserUUIDs).
+		Delete(&models.UserAddress{}).
+		Error; err != nil {
+		return err
+	}
 
-    // Borrar permanentemente los usuarios eliminados (Unscoped)
-    if err := db.
-        Unscoped().
-        Where("email IN (?)", testUserEmails).
-        Delete(&models.User{}).
-        Error; err != nil {
-        return err
-    }
+	// Borrar permanentemente los usuarios eliminados (Unscoped)
+	if err := db.
+		Unscoped().
+		Where("email IN (?)", testUserEmails).
+		Delete(&models.User{}).
+		Error; err != nil {
+		return err
+	}
 
-    log.Println("Usuarios de prueba borrados permanentemente")
+	log.Println("Usuarios de prueba borrados permanentemente")
 
-    return nil
+	return nil
 }

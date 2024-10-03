@@ -1,200 +1,161 @@
 package controllers
 
 import (
-	"net/http"
-	"strconv"
-	"strings"
-
-	"proyectoqueso/models"
-
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
+	"net/http"
+	"proyectoqueso/models"
+	"strconv"
 )
 
+// CollectionCenterController
 type CollectionCenterController struct {
 	DB *gorm.DB
 }
 
+// NewCollectionCenterController es el constructor para CollectionCenterController
 func NewCollectionCenterController(db *gorm.DB) *CollectionCenterController {
-	return &CollectionCenterController{DB: db}
+	return &CollectionCenterController{
+		DB: db,
+	}
 }
 
-// GetAllCollectionCenter returns all collection centers from the database
-func (uc *CollectionCenterController) GetAllCollectionCenter(c echo.Context) error {
-	var centers []models.CollectionCenter
-
-	// Preload de la relación con el usuario y el inventario
-	if err := uc.DB.Preload("CollectionCenterInventory").Preload("User").Find(&centers).Error; err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to retrieve collection centers"})
+// Crear Centro de Acopio
+func (c *CollectionCenterController) CreateCollectionCenter(ctx echo.Context) error {
+	var collectionCenter models.CollectionCenter
+	if err := ctx.Bind(&collectionCenter); err != nil {
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": "Error al procesar la solicitud"})
 	}
 
-	// Crear una estructura para la respuesta personalizada
-	type CollectionCenterResponse struct {
-		ID                        uint                               `json:"ID"`
-		Name                      string                             `json:"Name"`
-		Location                  string                             `json:"Location"`
-		UserID                    string                             `json:"user_id"` // Aquí se mantiene user_id pero con el nombre del usuario
-		CollectionCenterInventory []models.CollectionCenterInventory `json:"collection_center_inventory"`
+	// Generar un nuevo UUID para el UserID si no existe
+	if collectionCenter.UserID == nil {
+		collectionCenter.UserID = new(uuid.UUID)
+		*collectionCenter.UserID = uuid.New()
 	}
 
-	var response []CollectionCenterResponse
-	for _, center := range centers {
-		response = append(response, CollectionCenterResponse{
-			ID:                        center.ID,
-			Name:                      center.Name,
-			Location:                  center.Location,
-			UserID:                    center.User.FirstName, // Se asigna el nombre del usuario al campo user_id
-			CollectionCenterInventory: center.CollectionCenterInventory,
-		})
+	if err := c.DB.Create(&collectionCenter).Error; err != nil {
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"message": "Error al crear el centro de acopio"})
 	}
 
-	return c.JSON(http.StatusOK, response)
+	return ctx.JSON(http.StatusCreated, collectionCenter)
 }
 
-// CreateCollectionCenter creates a new collection center
-func (uc *CollectionCenterController) CreateCollectionCenter(c echo.Context) error {
-	var center models.CollectionCenter
-
-	if err := c.Bind(&center); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid input"})
+// Obtener todos los Centros de Acopio
+func (c *CollectionCenterController) GetAllCollectionCenters(ctx echo.Context) error {
+	var collectionCenters []models.CollectionCenter
+	if err := c.DB.Preload("CollectionCenterInventory").Find(&collectionCenters).Error; err != nil {
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"message": "Error al obtener los centros de acopio"})
 	}
 
-	// Asegurarse de que UserID sea nulo si no fue proporcionado
-	if center.UserID != nil && *center.UserID == uuid.Nil {
-		center.UserID = nil
-	}
-
-	if err := uc.DB.Create(&center).Error; err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create collection center"})
-	}
-
-	return c.JSON(http.StatusOK, center)
+	return ctx.JSON(http.StatusOK, collectionCenters)
 }
 
-func (uc *CollectionCenterController) DeleteCollectionCenter(c echo.Context) error {
-	id := c.Param("id")
+// Obtener un Centro de Acopio por ID
+func (c *CollectionCenterController) GetCollectionCenter(ctx echo.Context) error {
+	id := ctx.Param("id")
+	var collectionCenter models.CollectionCenter
 
-	// Remover cualquier slash al inicio del ID
-	id = strings.TrimPrefix(id, "/")
-
-	var center models.CollectionCenter
-
-	// Buscar el centro de acopio por su ID
-	if err := uc.DB.First(&center, "id = ?", id).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return c.JSON(http.StatusNotFound, map[string]string{"error": "Collection center not found"})
-		}
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to find collection center"})
+	// Preload para cargar la relación con el inventario
+	if err := c.DB.Preload("CollectionCenterInventory").Preload("CollectionCenterInventory.Product").
+		First(&collectionCenter, id).Error; err != nil {
+		return ctx.JSON(http.StatusNotFound, echo.Map{"message": "Centro de acopio no encontrado"})
 	}
 
-	// Eliminar el centro de acopio
-	if err := uc.DB.Delete(&center).Error; err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to delete collection center"})
-	}
-
-	return c.JSON(http.StatusOK, map[string]string{"message": "Collection center deleted successfully"})
+	return ctx.JSON(http.StatusOK, collectionCenter)
 }
 
-func (uc *CollectionCenterController) UpdateCollectionCenter(c echo.Context) error {
-    id := c.Param("id")
+// Actualizar un Centro de Acopio
+func (c *CollectionCenterController) UpdateCollectionCenter(ctx echo.Context) error {
+	id := ctx.Param("id")
+	var collectionCenter models.CollectionCenter
 
-    // Eliminar cualquier barra inclinada del inicio y del final
-    id = strings.Trim(id, "/")
+	if err := c.DB.First(&collectionCenter, id).Error; err != nil {
+		return ctx.JSON(http.StatusNotFound, echo.Map{"message": "Centro de acopio no encontrado"})
+	}
 
-    // Comprobar si id no está vacío antes de convertir
-    if id == "" {
-        return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid ID format"})
-    }
+	if err := ctx.Bind(&collectionCenter); err != nil {
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": "Error al procesar la solicitud"})
+	}
 
-    // Convertir el ID a un entero
-    collectionCenterID, err := strconv.Atoi(id)
-    if err != nil {
-        return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid ID format"})
-    }
+	if err := c.DB.Save(&collectionCenter).Error; err != nil {
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"message": "Error al actualizar el centro de acopio"})
+	}
 
-    var center models.CollectionCenter
-
-    // Buscar el centro de acopio por su ID
-    if err := uc.DB.First(&center, collectionCenterID).Error; err != nil {
-        if err == gorm.ErrRecordNotFound {
-            return c.JSON(http.StatusNotFound, map[string]string{"error": "Collection center not found"})
-        }
-        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to find collection center"})
-    }
-
-    // Crear una estructura para los datos del centro de acopio
-    var updatedCenter models.CollectionCenter
-
-    // Parsear el cuerpo de la solicitud directamente en la estructura
-    if err := c.Bind(&updatedCenter); err != nil {
-        return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid input"})
-    }
-
-    // Actualizar solo los campos permitidos en el modelo
-    center.Name = updatedCenter.Name
-    center.Location = updatedCenter.Location
-    // Agrega otros campos según sea necesario
-
-    // Guardar los cambios
-    if err := uc.DB.Save(&center).Error; err != nil {
-        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to update collection center"})
-    }
-
-    // Retornar el centro de acopio actualizado
-    return c.JSON(http.StatusOK, center)
+	return ctx.JSON(http.StatusOK, collectionCenter)
 }
 
+// Eliminar un Centro de Acopio
+func (c *CollectionCenterController) DeleteCollectionCenter(ctx echo.Context) error {
+	id := ctx.Param("id")
+	if err := c.DB.Delete(&models.CollectionCenter{}, id).Error; err != nil {
+		return ctx.JSON(http.StatusNotFound, echo.Map{"message": "Centro de acopio no encontrado"})
+	}
 
-// Input para el inventario
-type InventoryInput struct {
-	CollectionCenterID uint   `json:"collection_center_id"`
-	ProductName        string `json:"product_name"`
-	Quantity           uint   `json:"quantity"`
+	return ctx.JSON(http.StatusNoContent, nil)
 }
 
-// Crear un producto en el inventario de un centro de acopio
-func (ctrl *CollectionCenterController) CreateProductInInventory(c echo.Context) error {
-	var input InventoryInput
-	if err := c.Bind(&input); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+// Obtener inventario de un Centro de Acopio
+func (c *CollectionCenterController) GetInventory(ctx echo.Context) error {
+	id := ctx.Param("id")
+	var inventory []models.CollectionCenterInventory
+
+	// Cargar productos en el inventario
+	if err := c.DB.Where("collection_center_id = ?", id).Preload("Product").Find(&inventory).Error; err != nil {
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"message": "Error al obtener el inventario"})
 	}
 
-	// Buscar o crear producto
-	var product models.Product
-	if err := ctrl.DB.Where("name = ?", input.ProductName).FirstOrCreate(&product, models.Product{Name: input.ProductName}).Error; err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create or find product"})
-	}
-
-	// Crear inventario para el centro de acopio
-	inventory := models.CollectionCenterInventory{
-		CollectionCenterID: input.CollectionCenterID,
-		ProductID:          product.ID,
-		Quantity:           input.Quantity,
-	}
-
-	if err := ctrl.DB.Create(&inventory).Error; err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create inventory record"})
-	}
-
-	return c.JSON(http.StatusOK, inventory)
+	return ctx.JSON(http.StatusOK, inventory)
 }
 
-// Obtener la cantidad total de un producto en todos los centros de acopio
-func (ctrl *CollectionCenterController) GetTotalProductQuantity(c echo.Context) error {
-	productID, err := strconv.Atoi(c.Param("product_id"))
+// Obtener cantidad total de un producto en el inventario del centro de acopio
+func (c *CollectionCenterController) GetTotalProductQuantity(ctx echo.Context) error {
+	centerID := ctx.Param("id")
+	productID := ctx.Param("product_id")
+
+	var totalQuantity int
+
+	// Realizar la consulta para obtener la cantidad total del producto en el inventario
+	if err := c.DB.Model(&models.CollectionCenterInventory{}).
+		Where("collection_center_id = ? AND product_id = ?", centerID, productID).
+		Select("SUM(quantity)").Scan(&totalQuantity).Error; err != nil {
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"message": "Error al obtener la cantidad total del producto"})
+	}
+
+	return ctx.JSON(http.StatusOK, echo.Map{"total_quantity": totalQuantity})
+}
+
+// Crear un producto en el inventario del centro de acopio
+func (c *CollectionCenterController) CreateProductInInventory(ctx echo.Context) error {
+	centerID := ctx.Param("id")
+	var inventory models.CollectionCenterInventory
+
+	// Convertir centerID a uint
+	centerIDUint, err := strconv.ParseUint(centerID, 10, 32)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid product ID"})
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": "ID de centro de acopio no válido"})
 	}
 
-	var totalQuantity uint
-	err = ctrl.DB.Model(&models.CollectionCenterInventory{}).
-		Where("product_id = ?", productID).
-		Select("SUM(quantity)").
-		Scan(&totalQuantity).Error
+	// Verificar si el producto existe antes de agregarlo al inventario
+	productID := ctx.FormValue("product_id")
+	productIDUint, err := strconv.ParseUint(productID, 10, 32)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to calculate total quantity"})
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": "ID de producto no válido"})
 	}
 
-	return c.JSON(http.StatusOK, map[string]uint{"total_quantity": totalQuantity})
+	// Bind de los datos del inventario
+	if err := ctx.Bind(&inventory); err != nil {
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": "Error al procesar la solicitud"})
+	}
+
+	// Asignar los valores convertidos
+	inventory.CollectionCenterID = uint(centerIDUint)
+	inventory.ProductID = uint(productIDUint)
+
+	// Crear el inventario
+	if err := c.DB.Create(&inventory).Error; err != nil {
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"message": "Error al agregar el producto al inventario"})
+	}
+
+	return ctx.JSON(http.StatusCreated, inventory)
 }
