@@ -9,8 +9,6 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
-
-	// "golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -23,57 +21,47 @@ func NewProductController(db *gorm.DB) *ProductController {
 }
 
 func generarSlug(nombre string) string {
-	// Convertir a minúsculas
 	slug := strings.ToLower(nombre)
-	// Reemplazar espacios y caracteres especiales con guiones
 	slug = regexp.MustCompile(`\s+`).ReplaceAllString(slug, "-")
-	// Remover caracteres no deseados
 	slug = regexp.MustCompile(`[^\w\-]`).ReplaceAllString(slug, "")
 	return slug
 }
 
 func (au *ProductController) CreateProduct(c echo.Context) error {
-	// Declara una variable para almacenar el cuerpo de la solicitud
 	var requestBody map[string]interface{}
 
-	// Intenta unir el cuerpo de la solicitud al mapa
 	if err := c.Bind(&requestBody); err != nil {
 		return err
 	}
 
-	// Verifica si el cuerpo de la solicitud es nulo
 	if requestBody == nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Missing JSON body")
 	}
 
-	// Verifica si se proporcionan los campos necesarios en el cuerpo de la solicitud
-	requiredFields := []string{"name", "description", "category_id"}
+	requiredFields := []string{"name", "description", "category_id", "price", "price_min", "price_max"}
 	for _, field := range requiredFields {
 		if _, ok := requestBody[field]; !ok {
 			return echo.NewHTTPError(http.StatusBadRequest, "Missing "+field+" field")
 		}
 	}
 
-	// Genera el slug a partir del nombre
 	name := requestBody["name"].(string)
 	slug := generarSlug(name)
 
-	// Crea un nuevo producto
 	newProduct := &models.Product{
 		Name:        name,
 		Description: requestBody["description"].(string),
-		// Price:       requestBody["price"].(float64),
-		// Stock:       int(requestBody["stock"].(float64)),
-		CategoryID: int64(requestBody["category_id"].(float64)),
-		Slug:       slug, // Agrega el slug al producto
+		Price:       requestBody["price"].(float64),
+		PriceMin:    requestBody["price_min"].(float64),
+		PriceMax:    requestBody["price_max"].(float64),
+		CategoryID:  int64(requestBody["category_id"].(float64)),
+		Slug:        slug,
 	}
 
-	// Guarda el nuevo producto en la base de datos
 	if err := au.DB.Create(newProduct).Error; err != nil {
 		return err
 	}
 
-	// Devuelve una respuesta JSON indicando que el producto se creó correctamente
 	return c.JSON(http.StatusOK, map[string]string{
 		"message": "Product created successfully",
 	})
@@ -82,7 +70,6 @@ func (au *ProductController) CreateProduct(c echo.Context) error {
 func (au *ProductController) UpdateProduct(c echo.Context) error {
 	id := strings.TrimPrefix(c.Param("id"), "/")
 
-	// Check if id is provided
 	if id == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "Product ID is required")
 	}
@@ -92,29 +79,26 @@ func (au *ProductController) UpdateProduct(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid product ID")
 	}
 
-	// Bind the incoming JSON data to a map
 	requestBody := map[string]interface{}{}
 	if err := c.Bind(&requestBody); err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
 	}
 
-	// Define required fields
-	requiredFields := []string{"category_id", "description", "name"}
+	requiredFields := []string{"category_id", "description", "name", "price", "price_min", "price_max"}
 	for _, field := range requiredFields {
 		if _, ok := requestBody[field]; !ok {
 			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Missing %s field", field))
 		}
 	}
 
-	// Extract fields from the request body
 	categoryID := int64(requestBody["category_id"].(float64))
 	description := requestBody["description"].(string)
 	name := requestBody["name"].(string)
+	price := requestBody["price"].(float64)
+	priceMin := requestBody["price_min"].(float64)
+	priceMax := requestBody["price_max"].(float64)
 	slug := generarSlug(name)
-	// price := float64(requestBody["price"].(float64))
-	// stock := int(requestBody["stock"].(float64))
 
-	// Find the existing product
 	var existingProduct models.Product
 	if err := au.DB.First(&existingProduct, productID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -123,29 +107,26 @@ func (au *ProductController) UpdateProduct(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	// Update the product with new values
 	existingProduct.CategoryID = categoryID
 	existingProduct.Description = description
 	existingProduct.Name = name
-	// existingProduct.Price = price
-	// existingProduct.Stock = stock
+	existingProduct.Price = price
+	existingProduct.PriceMin = priceMin
+	existingProduct.PriceMax = priceMax
 	existingProduct.Slug = slug
 
-	// Save the updated product
 	if err := au.DB.Save(&existingProduct).Error; err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{
-		"message": "Category updated successfully",
+		"message": "Product updated successfully",
 	})
 }
 
 func (au *ProductController) DeleteProduct(c echo.Context) error {
-
 	id := strings.TrimPrefix(c.Param("id"), "/")
 
-	// Check if id is provided
 	if id == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "Product ID is required")
 	}
@@ -155,7 +136,6 @@ func (au *ProductController) DeleteProduct(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid product ID")
 	}
 
-	// Delete the product by ID
 	var product models.Product
 	if err := au.DB.First(&product, productID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -179,25 +159,21 @@ func (au *ProductController) GetProducts(c echo.Context) error {
 	pageSize := c.QueryParam("pageSize")
 	search := c.QueryParam("search")
 
-	// Parse page and pageSize into integers
 	var pageInt, pageSizeInt int
 	if page != "" {
 		pageInt, _ = strconv.Atoi(page)
 	} else {
-		pageInt = 1 // Default to page 1 if not provided
+		pageInt = 1
 	}
 	if pageSize != "" {
 		pageSizeInt, _ = strconv.Atoi(pageSize)
 	} else {
-		pageSizeInt = 10 // Default page size to 10 if not provided
+		pageSizeInt = 10
 	}
 
-	// Offset calculation for pagination
 	offset := (pageInt - 1) * pageSizeInt
-
 	var totalItems int64
 
-	// Check if id is provided
 	if id != "" {
 		var product models.Product
 		if err := au.DB.First(&product, id).Error; err != nil {
@@ -209,14 +185,12 @@ func (au *ProductController) GetProducts(c echo.Context) error {
 		return c.JSON(http.StatusOK, product)
 	}
 
-	// Check if slug is provided
+	var products []models.Product
+
 	if slug != "" {
-		var products []models.Product
-		// Count total items
 		if err := au.DB.Model(&models.Product{}).Where("slug LIKE ?", "%"+slug+"%").Count(&totalItems).Error; err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 		}
-		// Apply pagination
 		if err := au.DB.Where("slug LIKE ?", "%"+slug+"%").Offset(offset).Limit(pageSizeInt).Find(&products).Error; err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 		}
@@ -226,14 +200,10 @@ func (au *ProductController) GetProducts(c echo.Context) error {
 		})
 	}
 
-	// Check if slugCategory is provided
 	if slugCategory != "" {
-		var products []models.Product
-		// Count total items
 		if err := au.DB.Joins("Category").Where("Category.slug = ?", slugCategory).Model(&models.Product{}).Count(&totalItems).Error; err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 		}
-		// Apply pagination
 		if err := au.DB.Joins("Category").Where("Category.slug = ?", slugCategory).Offset(offset).Limit(pageSizeInt).Find(&products).Error; err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 		}
@@ -243,14 +213,10 @@ func (au *ProductController) GetProducts(c echo.Context) error {
 		})
 	}
 
-	// Check if search is provided
 	if search != "" {
-		var products []models.Product
-		// Count total items
 		if err := au.DB.Model(&models.Product{}).Where("name LIKE ?", "%"+search+"%").Count(&totalItems).Error; err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 		}
-		// Apply pagination
 		if err := au.DB.Where("name LIKE ?", "%"+search+"%").Offset(offset).Limit(pageSizeInt).Find(&products).Error; err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 		}
@@ -260,13 +226,9 @@ func (au *ProductController) GetProducts(c echo.Context) error {
 		})
 	}
 
-	// If neither id, slug, nor slugCategory is provided, return all products
-	var products []models.Product
-	// Count total items
 	if err := au.DB.Model(&models.Product{}).Count(&totalItems).Error; err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
-	// Apply pagination
 	if err := au.DB.Offset(offset).Limit(pageSizeInt).Find(&products).Error; err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
