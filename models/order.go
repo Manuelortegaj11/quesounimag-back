@@ -9,8 +9,8 @@ type OrderStatus string
 
 const (
 	StatusPending    OrderStatus = "pending"
-	StatusProcessing OrderStatus = "processing"
-	StatusCompleted  OrderStatus = "completed"
+	StatusProcessing OrderStatus = "rejected"
+	StatusCompleted  OrderStatus = "accepted"
 )
 
 type Order struct {
@@ -19,7 +19,7 @@ type Order struct {
 	UserID       uuid.UUID `gorm:"type:char(36);index"`
 	User         User      `gorm:"foreignKey:UserID"`
 	TotalAmount  float64
-	Status       OrderStatus   `gorm:"type:enum('pending', 'processing', 'completed');default:pending"`
+	Status       OrderStatus   `gorm:"type:enum('pending', 'rejected', 'accepted');default:pending"`
 	OrderDetails []OrderDetail `gorm:"foreignKey:OrderID"`
 	OrderAddress OrderAddress  `gorm:"foreignKey:OrderID"`
 }
