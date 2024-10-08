@@ -148,9 +148,9 @@ func (uc *CollectionCenterController) UpdateCollectionCenter(c echo.Context) err
 
 // Input para el inventario
 type InventoryInput struct {
-	CollectionCenterID uint   `json:"collection_center_id"`
-	ProductName        string `json:"product_name"`
-	Quantity           uint   `json:"quantity"`
+	CollectionCenterID uint `json:"collection_center_id"`
+	ProductID          uint `json:"product_id"`
+	Quantity           uint `json:"quantity"`
 }
 
 // Crear un producto en el inventario de un centro de acopio
@@ -160,16 +160,16 @@ func (ctrl *CollectionCenterController) CreateProductInInventory(c echo.Context)
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 
-	// Buscar o crear producto
+	// Verificar si el producto existe
 	var product models.Product
-	if err := ctrl.DB.Where("name = ?", input.ProductName).FirstOrCreate(&product, models.Product{Name: input.ProductName}).Error; err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create or find product"})
+	if err := ctrl.DB.First(&product, input.ProductID).Error; err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "Product not found"})
 	}
 
 	// Crear inventario para el centro de acopio
 	inventory := models.CollectionCenterInventory{
 		CollectionCenterID: input.CollectionCenterID,
-		ProductID:          product.ID,
+		ProductID:          input.ProductID,
 		Quantity:           input.Quantity,
 	}
 
