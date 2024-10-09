@@ -166,6 +166,12 @@ func (ctrl *CollectionCenterController) CreateProductInInventory(c echo.Context)
 		return c.JSON(http.StatusNotFound, map[string]string{"error": "Product not found"})
 	}
 
+	// Verificar si el centro de acopio existe
+	var collectionCenter models.CollectionCenter
+	if err := ctrl.DB.First(&collectionCenter, input.CollectionCenterID).Error; err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "Collection center not found"})
+	}
+
 	// Crear inventario para el centro de acopio
 	inventory := models.CollectionCenterInventory{
 		CollectionCenterID: input.CollectionCenterID,
@@ -175,6 +181,11 @@ func (ctrl *CollectionCenterController) CreateProductInInventory(c echo.Context)
 
 	if err := ctrl.DB.Create(&inventory).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create inventory record"})
+	}
+
+	// Preload del producto y del centro de acopio después de crear el registro
+	if err := ctrl.DB.Preload("Product").Preload("CollectionCenter").First(&inventory, inventory.ID).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to load inventory with relations"})
 	}
 
 	return c.JSON(http.StatusOK, inventory)
