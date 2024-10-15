@@ -166,25 +166,25 @@ func (uc *CollectionCenterController) UpdateCollectionCenter(c echo.Context) err
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to find collection center"})
 	}
 
-	// Crear una estructura para los datos del centro de acopio
-	var updatedCenter models.CollectionCenter
+	// Declarar una variable para almacenar los datos de la solicitud
+	var updateData models.CollectionCenter
 
-	// Parsear el cuerpo de la solicitud directamente en la estructura
-	if err := c.Bind(&updatedCenter); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid input"})
+	// Leer los datos del cuerpo de la solicitud
+	if err := c.Bind(&updateData); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid input data"})
 	}
 
-	// Actualizar solo los campos permitidos en el modelo
-	center.Name = updatedCenter.Name
-	center.Location = updatedCenter.Location
-	// Agrega otros campos según sea necesario
+	// Actualizar los campos del centro de acopio
+	center.Name = updateData.Name
+	center.Location = updateData.Location
+	center.UserID = updateData.UserID // Agrega más campos según sea necesario
 
-	// Guardar los cambios
+	// Guardar los cambios en la base de datos
 	if err := uc.DB.Save(&center).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to update collection center"})
 	}
 
-	// Retornar el centro de acopio actualizado
+	// Devolver el centro de acopio actualizado
 	return c.JSON(http.StatusOK, center)
 }
 
