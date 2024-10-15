@@ -22,10 +22,48 @@ func NewCollectionCenterController(db *gorm.DB) *CollectionCenterController {
 
 // GetAllCollectionCenter returns all collection centers from the database
 func (uc *CollectionCenterController) GetAllCollectionCenter(c echo.Context) error {
-	var centers []models.CollectionCenter
+	// Capturar parámetros de paginación y búsqueda
+	pageParam := c.QueryParam("page")
+	pageSizeParam := c.QueryParam("pageSize")
+	search := c.QueryParam("name")
 
-	// Preload de la relación con el usuario y el inventario
-	if err := uc.DB.Preload("CollectionCenterInventory").Preload("User").Find(&centers).Error; err != nil {
+	// Definir valores predeterminados de paginación
+	page := 1
+	pageSize := 10
+
+	// Convertir los parámetros de paginación a enteros si existen
+	if pageParam != "" {
+		if p, err := strconv.Atoi(pageParam); err == nil {
+			page = p
+		}
+	}
+	if pageSizeParam != "" {
+		if ps, err := strconv.Atoi(pageSizeParam); err == nil {
+			pageSize = ps
+		}
+	}
+
+	// Cálculo del offset
+	offset := (page - 1) * pageSize
+
+	// Inicializar la lista de centros de colección
+	var centers []models.CollectionCenter
+	var totalItems int64
+
+	// Construcción de la consulta con filtros de búsqueda
+	query := uc.DB.Preload("CollectionCenterInventory").Preload("User")
+
+	if search != "" {
+		query = query.Where("name LIKE ?", "%"+search+"%")
+	}
+
+	// Contar el número total de registros (sin paginación)
+	if err := query.Model(&models.CollectionCenter{}).Count(&totalItems).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to count collection centers"})
+	}
+
+	// Ejecutar la consulta con paginación
+	if err := query.Offset(offset).Limit(pageSize).Find(&centers).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to retrieve collection centers"})
 	}
 
@@ -34,22 +72,27 @@ func (uc *CollectionCenterController) GetAllCollectionCenter(c echo.Context) err
 		ID                        uint                               `json:"ID"`
 		Name                      string                             `json:"Name"`
 		Location                  string                             `json:"Location"`
-		UserID                    string                             `json:"user_id"` // Aquí se mantiene user_id pero con el nombre del usuario
+		UserID                    string                             `json:"user_id"` // Se mantiene user_id pero con el nombre del usuario
 		CollectionCenterInventory []models.CollectionCenterInventory `json:"collection_center_inventory"`
 	}
 
+	// Generar la respuesta con los datos obtenidos
 	var response []CollectionCenterResponse
 	for _, center := range centers {
 		response = append(response, CollectionCenterResponse{
 			ID:                        center.ID,
 			Name:                      center.Name,
 			Location:                  center.Location,
-			UserID:                    center.User.FirstName, // Se asigna el nombre del usuario al campo user_id
+			UserID:                    center.User.FirstName, // Se asigna el nombre del usuario
 			CollectionCenterInventory: center.CollectionCenterInventory,
 		})
 	}
 
-	return c.JSON(http.StatusOK, response)
+	// Enviar respuesta con paginación y datos
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"totalItems": totalItems,
+		"data":       response,
+	})
 }
 
 // CreateCollectionCenter creates a new collection center
@@ -97,54 +140,53 @@ func (uc *CollectionCenterController) DeleteCollectionCenter(c echo.Context) err
 }
 
 func (uc *CollectionCenterController) UpdateCollectionCenter(c echo.Context) error {
-    id := c.Param("id")
+	id := c.Param("id")
 
-    // Eliminar cualquier barra inclinada del inicio y del final
-    id = strings.Trim(id, "/")
+	// Eliminar cualquier barra inclinada del inicio y del final
+	id = strings.Trim(id, "/")
 
-    // Comprobar si id no está vacío antes de convertir
-    if id == "" {
-        return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid ID format"})
-    }
+	// Comprobar si id no está vacío antes de convertir
+	if id == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid ID format"})
+	}
 
-    // Convertir el ID a un entero
-    collectionCenterID, err := strconv.Atoi(id)
-    if err != nil {
-        return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid ID format"})
-    }
+	// Convertir el ID a un entero
+	collectionCenterID, err := strconv.Atoi(id)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid ID format"})
+	}
 
-    var center models.CollectionCenter
+	var center models.CollectionCenter
 
-    // Buscar el centro de acopio por su ID
-    if err := uc.DB.First(&center, collectionCenterID).Error; err != nil {
-        if err == gorm.ErrRecordNotFound {
-            return c.JSON(http.StatusNotFound, map[string]string{"error": "Collection center not found"})
-        }
-        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to find collection center"})
-    }
+	// Buscar el centro de acopio por su ID
+	if err := uc.DB.First(&center, collectionCenterID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "Collection center not found"})
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to find collection center"})
+	}
 
-    // Crear una estructura para los datos del centro de acopio
-    var updatedCenter models.CollectionCenter
+	// Crear una estructura para los datos del centro de acopio
+	var updatedCenter models.CollectionCenter
 
-    // Parsear el cuerpo de la solicitud directamente en la estructura
-    if err := c.Bind(&updatedCenter); err != nil {
-        return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid input"})
-    }
+	// Parsear el cuerpo de la solicitud directamente en la estructura
+	if err := c.Bind(&updatedCenter); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid input"})
+	}
 
-    // Actualizar solo los campos permitidos en el modelo
-    center.Name = updatedCenter.Name
-    center.Location = updatedCenter.Location
-    // Agrega otros campos según sea necesario
+	// Actualizar solo los campos permitidos en el modelo
+	center.Name = updatedCenter.Name
+	center.Location = updatedCenter.Location
+	// Agrega otros campos según sea necesario
 
-    // Guardar los cambios
-    if err := uc.DB.Save(&center).Error; err != nil {
-        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to update collection center"})
-    }
+	// Guardar los cambios
+	if err := uc.DB.Save(&center).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to update collection center"})
+	}
 
-    // Retornar el centro de acopio actualizado
-    return c.JSON(http.StatusOK, center)
+	// Retornar el centro de acopio actualizado
+	return c.JSON(http.StatusOK, center)
 }
-
 
 // Input para el inventario
 type InventoryInput struct {
